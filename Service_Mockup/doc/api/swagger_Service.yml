@@ -1,0 +1,133 @@
+---
+swagger: "2.0"
+info:
+  version: "1.2"
+  title: "Service SLR API"
+host: "example.service.example"
+basePath: "/api/1.2/slr"
+paths:
+  /link:
+    post:
+      tags:
+      - "Service Management"
+      - "Service"
+      description: "This is called to let Service know/store the generated surrogate_id."
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - in: "body"
+        name: "body"
+        description: "Contains surrogate_id and user_id"
+        required: true
+        schema:
+          $ref: "#/definitions/LinkParams"
+      responses:
+        200:
+          description: "Returns 200 OK or Error Message"
+  /login:
+    post:
+      tags:
+      - "Service"
+      - "Service Management"
+      description: "User logins to service here, provides code and the Service then\
+        \ sends the user_id and code to Service Mgmnt."
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - in: "body"
+        name: "body"
+        description: "Contains code and user_id"
+        required: true
+        schema:
+          $ref: "#/definitions/LoginParams"
+      responses:
+        200:
+          description: "Returns 200 OK or Error message"
+  /store_slr:
+    post:
+      tags:
+      - "Service"
+      - "Service Management"
+      description: "Copy of finished SLR received from Service Mgmnt for storing"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - in: "body"
+        name: "body"
+        description: "Contains SLR and SLSR"
+        required: true
+        schema:
+          $ref: "#/definitions/StoreSLRParams"
+      responses:
+        200:
+          description: "Returns 200 OK or Error message"
+definitions:
+  LoginParams:
+    type: "object"
+    properties:
+      code:
+        type: "string"
+        description: "string containing code"
+      user_id:
+        type: "string"
+        description: "string containing user_id"
+  LinkParams:
+    type: "object"
+    properties:
+      surrogate_id:
+        type: "string"
+        description: "string containing surrogate_id"
+      user_id:
+        type: "string"
+        description: "string containing user_id"
+  StoreSLRParams:
+    type: object
+    properties:
+      code:
+        type: string
+        description: string containing code
+      data:
+        type: object
+        properties:
+          surrogate_id:
+            type: string
+            description: string containing surrogate_id
+          meta:
+            type: object
+            properties:
+              ssr_id:
+                type: string
+                description: string containing ssr_id
+              slr_id:
+                type: string
+                description: string containing slr_id
+          ssr:
+            type: object
+            properties:
+              attributes:
+                type: object
+                properties:
+                  ssr:
+                    type: object
+                    description: "See: https://github.com/HIIT/mydata-stack/blob/master/mydata-linking.pdf"
+              type:
+                type: string
+                description: string containing type
+          slr:
+            type: object
+            properties:
+              attributes:
+                type: object
+                properties:
+                  slr:
+                    type: object
+                    description: "See: https://github.com/HIIT/mydata-stack/blob/master/mydata-linking.pdf"
+              type:
+                type: string
+                description: string containing type

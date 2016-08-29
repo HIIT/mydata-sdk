@@ -1,0 +1,168 @@
+---
+swagger: "2.0"
+info:
+  version: "1.2"
+  title: "Operator SLR API"
+host: "example.operator.example"
+basePath: "/api/1.2/slr"
+paths:
+  /link:
+    post:
+      tags:
+      - "Operator"
+      description: "End point where Service Mgmnt POSTs after user has been authenticated\
+        \ by the Service inorder to deliver surrogate id to Operator."
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - in: "body"
+        name: "body"
+        description: "Contains code, surrogate_id and token_key"
+        required: true
+        schema:
+          $ref: "#/definitions/LinkParams"
+      responses:
+        200:
+          description: "Returns 200 OK or Error message"
+  /account/{account_id}/service/{service_id}:
+    get:
+      tags:
+      - "Operator"
+      description: "Entry point for creating new SLR with service\nWill takes a UUID\
+        \ of service to link with as paramater"
+      parameters:
+      - name: "account_id"
+        in: "path"
+        description: "Unique ID of user initiating process."
+        required: true
+        type: "string"
+        format: "uuid4"
+      - name: "service_id"
+        in: "path"
+        description: "Unique ID of service to make SLR with."
+        required: true
+        type: "string"
+        format: "uuid4"
+      responses:
+        200:
+          description: "Returns 200 OK"
+  /verify:
+    post:
+      tags:
+      - "Operator"
+      description: "End point where Service Mgmnt POSTs after signing SLR from Operator"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - in: "body"
+        name: "body"
+        description: "slr and ssr"
+        required: true
+        schema:
+          $ref: "#/definitions/VerifyParams"
+      responses:
+        200:
+          description: "Returns 200 OK so Service Mngmt knows SLR was verified\
+            \ successfully"
+          schema:
+            $ref: "#/definitions/VerifyResponse"
+
+definitions:
+  LinkParams:
+    type: "object"
+    properties:
+      code:
+        type: "string"
+        description: "string containing code"
+      token_key:
+        $ref: "#/definitions/LinkParams_token_key"
+      surrogate_id:
+        type: "string"
+        description: "string containing surrogate_id"
+
+  VerifyParams:
+    type: "object"
+    properties:
+      data:
+        type: object
+        properties:
+          code:
+            type: string
+            description: string containing code
+      slr:
+        type: object
+        properties:
+          signatures:
+            type: array
+            items:
+              type: string
+          payload:
+            type: string
+            description: string containing payload
+  LinkParams_token_key:
+    properties:
+      kty:
+        type: "string"
+        description: "string containing kty"
+      x:
+        type: "string"
+        description: "string containing x"
+      kid:
+        type: "string"
+        description: "string containing kid"
+      crv:
+        type: "string"
+        description: "string containing crv"
+      y:
+        type: "string"
+        description: "string containing y"
+  VerifyResponse:
+    type: object
+    properties:
+      code:
+        type: string
+        description: string containing code
+      data:
+        type: object
+        properties:
+          ssr:
+            type: object
+            properties:
+              attributes:
+                type: object
+                properties:
+                  ssr:
+                    type: object
+                    description: "See: https://github.com/HIIT/mydata-stack/blob/master/mydata-linking.pdf"
+              type:
+                type: string
+                description: string containing type
+          meta:
+            type: object
+            properties:
+              slr_id:
+                type: string
+                description: string containing slr_id
+              ssr_id:
+                type: string
+                description: string containing ssr_id
+          surrogate_id:
+            type: string
+            description: string containing surrogate_id
+          slr:
+            type: object
+            properties:
+              attributes:
+                type: object
+                properties:
+                  slr:
+                    type: object
+                    description: "See: https://github.com/HIIT/mydata-stack/blob/master/mydata-linking.pdf"
+              type:
+                type: string
+                description: string containing type
+

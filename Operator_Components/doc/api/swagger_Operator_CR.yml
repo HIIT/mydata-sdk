@@ -1,0 +1,207 @@
+---
+swagger: "2.0"
+info:
+  version: "1.2"
+  title: "Operator CR API"
+host: "example.operator.example"
+basePath: "/api/1.2/cr"
+paths:
+  /consent_form/account/{account_id}:
+    # This is a HTTP operation
+    get:
+      # Describe this verb here. Note: you can use markdown
+      description: |
+        Gets `Consent Form` template.
+      # This is array of GET operation parameters:
+      parameters:
+        # An example parameter that is in query and is required
+        -
+          name: source
+          in: query
+          description: source id
+          required: true
+          type: string
+
+        -
+          name: sink
+          in: query
+          description: sink id
+          required: true
+          type: string
+
+        -
+          name: "account_id"
+          in: "path"
+          required: true
+          type: string
+          description: "account id"
+
+      # Expected responses for this operation:
+      responses:
+        200:
+          description: "Returns 200 OK or Error message"
+          schema:
+            $ref: "#/definitions/Consent_FormReply"
+
+    post:
+      # Describe this verb here. Note: you can use markdown
+      description: "Post filled `Consent Form`"
+      # This is array of GET operation parameters:
+      parameters:
+        # An example parameter that is in query and is required
+        -
+          name: source
+          in: query
+          description: source id
+          required: true
+          type: string
+
+        -
+          name: sink
+          in: query
+          description: sink id
+          required: true
+          type: string
+        -
+          name: "account_id"
+          in: "path"
+          required: true
+          type: string
+          description: "account id"
+        -
+          in: "body"
+          name: "body"
+          description: "User filled Consent Form"
+          required: true
+          schema:
+            $ref: "#/definitions/Consent_FormReply"
+      # Expected responses for this operation:
+      responses:
+        200:
+          description: "Returns 200 OK or Error message"
+
+  /auth_token/{cr_id}:
+    get:
+      tags:
+      - "Operator"
+      - "Sink"
+      description: "Returns Auth token for specific cr_id"
+      parameters:
+      - name: "cr_id"
+        in: "path"
+        description: "Unique ID consent record"
+        required: true
+        type: "string"
+        format: "uuid4"
+      responses:
+        200:
+          description: "returns 200 OK and Auth Token, or Error message"
+          schema:
+            $ref: "#/definitions/Auth_TokenReply"
+
+
+
+definitions:
+  Auth_TokenReply:
+    type: object
+    properties:
+      auth_token:
+        type: string
+        description: string containing auth_token
+
+
+  DataSet_Sink:
+    type: object
+    properties:
+      publisher:
+        type: string
+        description: string containing publisher
+      description:
+        type: string
+        description: string containing description
+      keyword:
+        type: array
+        items:
+          type: string
+      title:
+        type: string
+        description: string containing title
+      purposes:
+        type: array
+        items:
+          type: object
+          properties:
+            required:
+              type: string
+              description: boolean containing required
+            selected:
+              type: string
+              description: boolean containing selected
+            title:
+              type: string
+              description: string containing title
+
+      datase_id:
+        type: string
+        description: string containing datase_id
+
+  DataSet_Source:
+    type: "object"
+    properties:
+      publisher:
+        type: string
+        description: string containing publisher
+      description:
+        type: string
+        description: string containing description
+      keyword:
+        type: array
+
+      title:
+        type: string
+        description: string containing title
+      component_specification_label:
+        type: string
+        description: string containing component_specification_label
+      distribution:
+        type: object
+        properties:
+          distribution_id:
+            type: string
+            description: string containing distribution_id
+          access_url:
+            type: string
+            description: string containing access_url
+      selected:
+        type: string
+        description: boolean containing selected
+      datase_id:
+        type: string
+        description: string containing datase_id
+
+  Consent_FormReply:
+    type: "object"
+    properties:
+      source:
+        type: "object"
+        properties:
+          service_id:
+            type: string
+            description: string containing service_id
+          rs_id:
+            type: string
+            description: string containing rs_id
+          dataset:
+            type: array
+            items:
+              $ref: "#/definitions/DataSet_Source"
+      sink:
+        type: "object"
+        properties:
+          service_id:
+            type: string
+            description: string containing service_id
+          dataset:
+            type: array
+            items:
+              $ref: "#/definitions/DataSet_Sink"

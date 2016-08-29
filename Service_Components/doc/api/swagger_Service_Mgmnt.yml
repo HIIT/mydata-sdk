@@ -1,0 +1,111 @@
+---
+swagger: "2.0"
+info:
+  version: "1.2"
+  title: "Service Management SLR API"
+host: "example.service_mgmnt.example"
+basePath: "/api/1.2/slr"
+paths:
+  /auth:
+    post:
+      tags:
+      - "Service Management"
+      - "Service"
+      description: "Service calls this after user has authenticated. Causes Service\
+        \ Management to generate surrogate_id for the operator."
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - in: "body"
+        name: "body"
+        description: "code and user_id."
+        required: true
+        schema:
+          $ref: "#/definitions/LoginParams"
+      responses:
+        200:
+          description: "Returns 200 OK so Service Mngmt knows SLR was verified\
+            \ successfully"
+  /code:
+    get:
+      tags:
+      - "Operator"
+      - "Service Management"
+      description: "Generates, store and returns unique code for the SLR flow"
+      parameters: []
+      responses:
+        200:
+          description: "Returns the code used in next steps of SLR flow. This is required\
+            \ on most endpoints that follow."
+          schema:
+            $ref: "#/definitions/CodeResponse"
+  /login:
+    post:
+      tags:
+      - "Operator"
+      - "Service Management"
+      description: "Login redirector, this part checks the code validy before sending\
+        \ the request to Service so it can authenticate the user."
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - in: "body"
+        name: "body"
+        description: "Contains code and user_id"
+        required: true
+        schema:
+          $ref: "#/definitions/LoginParams"
+      responses:
+        200:
+          description: "Returns 200 OK or Error message"
+  /slr:
+    post:
+      tags:
+      - "Service Management"
+      - "Operator"
+      description: "Takes SLR signed by Operator, signs it with own key and sends\
+        \ to Operator for verification."
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - in: "body"
+        name: "body"
+        description: "code and user_id, here user_id is mandatory."
+        required: true
+        schema:
+          $ref: "#/definitions/SlrParams"
+      responses:
+        200:
+          description: "Returns 200 OK or Error message"
+definitions:
+  LoginParams:
+    type: "object"
+    properties:
+      code:
+        type: "string"
+        description: "string containing code"
+      user_id:
+        type: "string"
+        description: "string containing user_id."
+  SlrParams:
+    type: "object"
+    properties:
+      data:
+        type: object
+        properties:
+          code:
+            type: string
+            description: string containing code
+      slr:
+        type: object
+        description: "See: https://github.com/HIIT/mydata-stack/blob/master/mydata-linking.pdf"
+  CodeResponse:
+    properties:
+      code:
+        type: "string"

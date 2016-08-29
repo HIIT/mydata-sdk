@@ -1,0 +1,52 @@
+---
+swagger: "2.0"
+info:
+  version: "1.2"
+  title: "Authorization Management API"
+host: "example.service_mgmnt.example"
+basePath: "/api/1.2/cr"
+paths:
+  /add_cr:
+    post:
+      tags:
+      - "Authorization Management"
+      - "Operator"
+      description: "Operator calls this to give CR/CSR to the service"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - in: "body"
+        name: "body"
+        description: "payload"
+        required: true
+        schema:
+          $ref: "#/definitions/CRCSRParams"
+      responses:
+        200:
+          description: "Returns 200 OK"
+
+definitions:
+  CRCSRParams:
+    type: "object"
+    properties:
+      source:
+        type: object
+        properties:
+          cr:
+            type: object
+            description: "See: https://github.com/HIIT/mydata-stack/blob/master/mydata-data-authz.pdf"
+
+          csr:
+            type: object
+            description: "See: https://github.com/HIIT/mydata-stack/blob/master/mydata-data-authz.pdf"
+      sink:
+        type: object
+        properties:
+          cr:
+            type: object
+            description: "See: https://github.com/HIIT/mydata-stack/blob/master/mydata-data-authz.pdf"
+          csr:
+            type: object
+            description: "See: https://github.com/HIIT/mydata-stack/blob/master/mydata-data-authz.pdf"
