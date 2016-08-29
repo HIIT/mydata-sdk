@@ -16,4 +16,4 @@ Database module (mod_database) provides database integration for MyData Account
 # Architecture
 High level description of MyData Account Architecture
 
-![Architecture](/doc/images/MyDataAccount_Architecture.png)
+![Architecture](../doc/images/MyDataAccount_Architecture.png)

@@ -9,10 +9,10 @@ This is a part of MyData-SDK implementation of MyData Architecture. This reposit
 - [Python 2.7](https://www.python.org/download/releases/2.7/)
 
 ## Documentation
-- [Documentation ](/doc/)
-- [Deployment](/doc/deployment.md)
-- [API documentation](/doc/api/)
-- [Database documentation](/doc/database/)
+- [Documentation ](doc/)
+- [Deployment](doc/deployment.md)
+- [API documentation](doc/api/)
+- [Database documentation](doc/database/)
 - [Developer One-liners](doc/developer_oneliners.md)
 
 ## Support / Contact / Contribution

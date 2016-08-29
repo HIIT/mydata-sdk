@@ -1,8 +1,8 @@
 # Detailed Documentation
-- [Deployment](/doc/deployment.md)
-- [API documentation](/doc/api/)
-- [Database documentation](/doc/database/)
-- [Developer One-liners](/doc/developer_oneliners.md)
+- [Deployment](deployment.md)
+- [API documentation](api/)
+- [Database documentation](database/)
+- [Developer One-liners](developer_oneliners.md)
 
 # MyData Account modules
 ## Service Linking
@@ -22,4 +22,4 @@ Database module (mod_database) provides database integration for MyData Account
 # Architecture
 High level description of MyData Account Architecture
 
-![Architecture](/doc/images/MyDataAccount_Architecture.png)
+![Architecture](images/MyDataAccount_Architecture.png)

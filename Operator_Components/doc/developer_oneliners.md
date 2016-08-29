@@ -15,9 +15,9 @@
 
 ## Deployment
 
-    Clone this repo.
+Clone this repo.
 
-    Checkout master-branch.
+Checkout master-branch.
     
     cd Operator_Components/
     

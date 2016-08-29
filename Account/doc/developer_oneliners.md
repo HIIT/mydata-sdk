@@ -13,10 +13,10 @@ Log files are usually found from
 uWSGI logging path is defined in uwsgi.ini.
 If deployed as instructed in log file can be found from
 
-    /var/www/myDataAccount/minimum-viable-account/uwsgi.log
+    /var/www/myDataAccount/mydata-sdk/Account/uwsgi.log
 
 
 ### If logging to file is enabled in Flask Application's config file log can be found from
 
-    /var/www/myDataAccount/minimum-viable-account/logs
+    /var/www/myDataAccount/mydata-sdk/Account/logs
 

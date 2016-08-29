@@ -13,12 +13,12 @@ Service Mockup is bare bone sample implementation of API Service should provide.
 
 ## Deployment
 
-- [ Documentation ](/doc/developer_oneliners.md)
+- [ Documentation ](doc/developer_oneliners.md)
 
 ## Documentation
-- [ Documentation ](/doc/)
-- [ Developer one-liners ](/doc/developer_oneliners.md)
-- [ API documentation ](/doc/api/)
+- [ Documentation ](doc/)
+- [ Developer one-liners ](doc/developer_oneliners.md)
+- [ API documentation ](doc/api/)
 
 ## Repository structure
 

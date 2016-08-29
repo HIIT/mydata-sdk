@@ -15,12 +15,12 @@ Operator Components implements
 
 ## Deployment
 
-- [ Documentation](/doc/developer_oneliners.md)
+- [ Documentation](doc/developer_oneliners.md)
 
 ## Documentation
-- [ Documentation ](/doc/)
-- [ Developer one-liners ](/doc/developer_oneliners.md)
-- [ API documentation ](/doc/api/)
+- [ Documentation ](doc/)
+- [ Developer one-liners ](doc/developer_oneliners.md)
+- [ API documentation ](doc/api/)
 
 ## Repository structure
 

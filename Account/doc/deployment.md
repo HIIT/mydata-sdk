@@ -36,8 +36,11 @@ Note: Instructions based on Ubuntu 14.04 server
     cd /var/www/myDataAccount
 
 ### Clone from Git
-    sudo git clone https://dhrproject_bbrobot@bitbucket.org/dhrpoc/minimum-viable-account.git
-    cd minimum-viable-account
+Clone this repo.
+
+Checkout master-branch.
+    
+    cd Account
 
 ### Configure
 
@@ -68,7 +71,7 @@ Check application configuration file and modify if necessary.
 ## Development mode
 Run application in development mode at port 8080
 
-    cd /var/www/myDataAccount/minimum-viable-account
+    cd /var/www/myDataAccount/mydata-sdk/Account
     source venv/bin/activate
     python run.py
 
@@ -84,7 +87,7 @@ Run application in production mode at port 80
 
 ### Test uWSGI serving
 
-    cd /var/www/myDataAccount/minimum-viable-account
+    cd /var/www/myDataAccount/mydata-sdk/Account
     source venv/bin/activate
     sudo uwsgi --socket 0.0.0.0:8080 --protocol=http -w wsgi --virtualenv venv/ --callable app
 
@@ -99,7 +102,7 @@ Deactivate virtual environment
 #### uWSGI Configuration File
 Modify application path if necessary. At least application's base path should be updated.
 
-    cd /var/www/myDataAccount/minimum-viable-account
+    cd /var/www/myDataAccount/mydata-sdk/Account
     sudo nano uwsgi.ini
 
 #### File permissions
@@ -111,7 +114,7 @@ Ensure ownership and access rights of application files
 
 #### Start uWSGI serving
 
-    cd /var/www/myDataAccount/minimum-viable-account
+    cd /var/www/myDataAccount/mydata-sdk/Account
     sudo uwsgi --ini uwsgi.ini &
 
 ### Configure Nginx
@@ -131,7 +134,7 @@ Add following content to newly created configuration file and modify if necessar
         server_name	127.0.0.1;
         charset	utf-8;
         client_max_body_size 5M;
-        root /var/www/myDataAccount/minimum-viable-account;
+        root /var/www/myDataAccount/mydata-sdk/Account;
 
         location / {
             include uwsgi_params;
