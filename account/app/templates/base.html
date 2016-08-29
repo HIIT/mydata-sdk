@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% block head %}
+    <meta charset="utf-8">
+    <link rel=stylesheet type=text/css href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
+    <link rel=stylesheet type=text/css href="{{ url_for('static', filename='font-awesome/css/font-awesome.css') }}">
+    <link rel=stylesheet type=text/css href="{{ url_for('static', filename='css/plugins/datapicker/datepicker3.css') }}">
+
+    <link rel=stylesheet type=text/css href="{{ url_for('static', filename='css/animate.css') }}">
+    <link rel=stylesheet type=text/css href="{{ url_for('static', filename='css/style.css') }}">
+    <title>{% block title %}{% endblock %} - MyData Account</title>
+    {% endblock %}
+</head>
+<body class="boxed-layout">
+    <div id="wrapper">
+
+        <div id="content" class="" style="padding-bottom: 1em;">
+
+            {% for message in get_flashed_messages() %}
+                <div class="alert alert-success alert-dismissable">
+                    <button class="close" type="button" data-dismiss="alert" aria-hidden="true">x</button>
+                    {{ message }}
+                </div>
+            {% endfor %}
+
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/jquery-2.1.1.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/bootstrap.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/plugins/datapicker/bootstrap-datepicker.js') }}"></script>
+
+    <script>
+        $(document).ready(function(){
+            // Date picker for date of birth
+            $('#dateofbirth_picker .input-group.date').datepicker({
+                startView: 2,
+                todayBtn: "linked",
+                keyboardNavigation: true,
+                forceParse: false,
+                autoclose: true,
+                calendarWeeks: false,
+                clearBtn: false,
+                forceParse: true,
+                format: 'dd-mm-yyyy',
+                startDate: '1-1-1900',
+                todayHighlight: 'false',
+                weekStart: 1,
+                assumeNearbyYear: true
+            });
+        });
+    </script>
+</body>
+</html>

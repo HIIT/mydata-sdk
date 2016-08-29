@@ -1,0 +1,579 @@
+swagger: '2.0'
+
+info:
+  title: 'Digital Health Revolution - MyData Account'
+  description:
+    ' #### MyData-SDK - MyData Account API - Internal '
+  version: '1.2'
+  contact:
+    url: 'https://github.com/HIIT/mydata-stack'
+  license:
+    name: 'MIT License (MIT)'
+    url: 'https://opensource.org/licenses/MIT'
+
+schemes:
+  - https
+
+basePath: '/api/'
+
+consumes:
+  - application/json
+
+produces:
+  - application/json
+
+securityDefinitions:
+
+  internalApiKeyAuth:
+    type: apiKey
+    name: Api-Key
+    in: header
+    description: Authentication using apiKey for internal use
+
+  BasicAuth:
+    type: basic
+    description: HTTP Basic Auth
+
+externalDocs:
+  description: 'External documentation'
+  url: 'https://github.com/HIIT/mydata-stack'
+
+paths:
+  /auth/sdk/:
+    get:
+      security:
+        - BasicAuth: []
+      description: 'Get ApiKey for internal use'
+
+      tags:
+        - Auth
+        - ApiKey
+
+      responses:
+        '200':
+          description: ApiKey for internal use
+          schema:
+            $ref: '#/definitions/apiKeyResponse'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/errors'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/errors'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/errors'
+        '500':
+          description: Internal Server error
+          schema:
+            $ref: '#/definitions/errors'
+
+  /account/{account_id}/servicelink/:
+    post:
+      security:
+        - internalApiKeyAuth: []
+      description: "Constructs Service Link Record based on provided Service Link Record payload. Signs constructed Service Link Record with Account owner's key."
+
+      parameters:
+        - name: account_id
+          in: path
+          type: string
+          description: 'Account ID'
+          required: true
+        - name: newSL
+          in: body
+          description: 'Payloads for Service Link Record and Service Link Status Record'
+          required: true
+          schema:
+            $ref: '#/definitions/newServiceLinkRequest'
+
+      tags:
+        - ServiceLink
+        - Sign
+
+      responses:
+        '201':
+          description: 'Service Link Record and Service Link Status Record created'
+          schema:
+            $ref: '#/definitions/newServiceLinkResponse'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/errors'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/errors'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/errors'
+        '500':
+          description: Internal Server error
+          schema:
+            $ref: '#/definitions/errors'
+
+  /account/{account_id}/servicelink/verify/:
+    post:
+      security:
+        - internalApiKeyAuth: []
+      description: "Verifies the integrity of provided Service Link Record. If verification passes Service Link Status Record is constructed and signed with Account owner's key. Finally both records are stored."
+
+      parameters:
+        - name: account_id
+          in: path
+          type: string
+          description: 'Account ID'
+          required: true
+        - name: SlToVerify
+          in: body
+          description: 'Payloads for Consent Record and Consent Status Record'
+          required: true
+          schema:
+            $ref: '#/definitions/verifySlRequest'
+
+      tags:
+        - ServiceLink
+        - Verify
+
+      responses:
+        '200':
+          description: 'Consent Record and Consent Status Record created'
+          schema:
+            $ref: '#/definitions/verifySlrResponse'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/errors'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/errors'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/errors'
+        '500':
+          description: Internal Server error
+          schema:
+            $ref: '#/definitions/errors'
+
+
+  /account/{account_id}/service/{service_id}/surrogate/:
+    get:
+      security:
+        - internalApiKeyAuth: []
+      description: 'Get stored surrogate ID and Service Link Record ID for Account and Service'
+
+      parameters:
+        - name: account_id
+          in: path
+          type: string
+          description: 'Account ID'
+          required: true
+        - name: service_id
+          in: path
+          type: string
+          description: 'Service ID'
+          required: true
+
+      tags:
+        - Surrogate
+        - ServiceLink
+        - Consent
+
+      responses:
+        '201':
+          description: 'Surrogate ID'
+          schema:
+            $ref: '#/definitions/surrogateResponse'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/errors'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/errors'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/errors'
+        '500':
+          description: Internal Server error
+          schema:
+            $ref: '#/definitions/errors'
+
+
+  /account/{account_id}/servicelink/{source_slr_id}/{sink_slr_id}/consent/:
+    post:
+      security:
+        - internalApiKeyAuth: []
+      description: "Constructs Consent Record's and Consent Status Record's based on provided payloads for Source and Sink services. Signs constructed record's with Account owner's key. After signing records are stored."
+
+      parameters:
+        - name: account_id
+          in: path
+          type: string
+          description: 'Account ID'
+          required: true
+        - name: source_slr_id
+          in: path
+          type: string
+          description: 'Service link record ID of Source service'
+          required: true
+        - name: sink_slr_id
+          in: path
+          type: string
+          description: 'Service link record ID of Sink service'
+          required: true
+        - name: consent_data
+          in: body
+          description: 'Consent Record and Consent Status Record payloads'
+          required: true
+          schema:
+            $ref: '#/definitions/newConsentRequest'
+
+      tags:
+        - Consent
+
+      responses:
+        '201':
+          description: 'Consent Record and Consent Status Record created and stored'
+          schema:
+            $ref: '#/definitions/newConsentResponse'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/errors'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/errors'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/errors'
+        '500':
+          description: Internal Server error
+          schema:
+            $ref: '#/definitions/errors'
+
+
+  /consent/{sink_cr_id}/authorizationtoken/:
+    get:
+      security:
+        - internalApiKeyAuth: []
+      description: "Provides information needed to construct Authorization token."
+
+      parameters:
+        - name: sink_cr_id
+          in: path
+          type: string
+          description: "Consent Record ID of Sink service"
+          required: true
+
+      tags:
+        - Consent
+        - Authorizationtoken
+
+      responses:
+        '200':
+          description: 'Base data for authorization tokens'
+          schema:
+            $ref: '#/definitions/AuthorizationTokenResponse'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/errors'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/errors'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/errors'
+        '500':
+          description: Internal Server error
+          schema:
+            $ref: '#/definitions/errors'
+
+
+
+definitions:
+
+  AuthorizationTokenResponse:
+    type: object
+    properties:
+      data:
+        type: object
+        properties:
+          source:
+            type: object
+            properties:
+              consentRecord:
+                  $ref: '#/definitions/ConsentRecord'
+          sink:
+            type: object
+            properties:
+              serviceLinkRecord:
+                  $ref: '#/definitions/Slr'
+
+  errors:
+    type: array
+    items:
+      type: object
+      properties:
+        status:
+          type: string
+          description: HTTP status code as string value.
+        code:
+          type: integer
+          description: HTTP status code
+        title:
+          type: string
+          description: Title of error message.
+        detail:
+          type: string
+          description: Detailed error message.
+        source:
+          type: string
+          description: Source URI
+
+  apiKeyResponse:
+    type: object
+    properties:
+      Api-Key:
+        type: string
+        description: ApiKey
+
+  newSlr:
+    type: object
+    properties:
+      type:
+        type: string
+        description: "Resource type: 'ServiceLinkRecord'"
+      attributes:
+        type: object
+        description: 'Payload for Service Link Record - [MyData Service Linking Specification] (https://github.com/HIIT/mydata-stack)'
+
+  newSlSr:
+    type: object
+    properties:
+      type:
+        type: string
+        description: "Resource type: 'ServiceLinkStatusRecord'"
+      attributes:
+        type: object
+        description: 'Payload for Service Link Status Record - [MyData Service Linking Specification] (https://github.com/HIIT/mydata-stack)'
+
+  Slr:
+    type: object
+    properties:
+      type:
+        type: string
+        description: "Resource type: 'ServiceLinkRecord'"
+      attributes:
+        type: object
+        properties:
+          slr:
+            type: object
+            description: 'Service Link Record as JWS - [MyData Service Linking Specification] (https://github.com/HIIT/mydata-stack)'
+
+  Ssr:
+    type: object
+    properties:
+      type:
+        type: string
+        description: "Resource type: 'ServiceLinkStatusRecord'"
+      attributes:
+        type: object
+        properties:
+          ssr:
+            type: object
+            description: 'Service Link Status Record as JWS - [MyData Service Linking Specification] (https://github.com/HIIT/mydata-stack)'
+
+  newServiceLinkRequest:
+    type: object
+    properties:
+      code:
+        type: string
+        description: 'Code'
+      data:
+        type: object
+        properties:
+          slr:
+              $ref: '#/definitions/newSlr'
+          surrogate_id:
+            $ref: '#/definitions/SurrogateId'
+
+  newServiceLinkResponse:
+    type: object
+    properties:
+      code:
+        type: string
+        description: 'Code'
+      data:
+        type: object
+        properties:
+          slr:
+              $ref: '#/definitions/Slr'
+          surrogate_id:
+            $ref: '#/definitions/SurrogateId'
+
+  verifySlRequest:
+    type: object
+    properties:
+      code:
+        type: string
+        description: 'Code'
+      data:
+        type: object
+        properties:
+          slr:
+              $ref: '#/definitions/Slr'
+          ssr:
+            $ref: '#/definitions/newSlSr'
+          surrogate_id:
+            $ref: '#/definitions/SurrogateId'
+
+  verifySlrResponse:
+    type: object
+    properties:
+      code:
+        type: string
+        description: 'Code'
+      data:
+        type: object
+        properties:
+          slr:
+              $ref: '#/definitions/Slr'
+          ssr:
+            $ref: '#/definitions/Ssr'
+          surrogate_id:
+            $ref: '#/definitions/SurrogateId'
+
+  SurrogateId:
+    type: object
+    properties:
+      type:
+        type: string
+        description: "Resource type: 'SurrogateId'"
+      attributes:
+        type: object
+        properties:
+          surrogate_id:
+            type: string
+            description: 'Surrogate ID'
+          servicelinkrecord_id:
+            type: string
+            description: 'Service Link Record ID'
+          service_id:
+            type: string
+            description: 'Service ID'
+          account_id:
+            type: string
+            description: 'Account ID'
+
+
+  surrogateResponse:
+    type: object
+    properties:
+      data:
+        type: object
+        properties:
+          surrogate_id:
+            $ref: '#/definitions/SurrogateId'
+
+
+  newConsent:
+    type: object
+    properties:
+      type:
+        type: string
+        description: "Resource type: 'ConsentRecord'"
+      attributes:
+        type: object
+        description: 'Payload for Consent Record - [MyData Authorization Specification] (https://github.com/HIIT/mydata-stack)'
+
+  newConsentStatus:
+    type: object
+    properties:
+      type:
+        type: string
+        description: "Resource type: 'ConsentStatusRecord'"
+      attributes:
+        type: object
+        description: 'Payload for Consent Status Record - [MyData Authorization Specification] (https://github.com/HIIT/mydata-stack)'
+
+  ConsentRecord:
+    type: object
+    properties:
+      type:
+        type: string
+        description: "Resource type: 'ConsentRecord'"
+      attributes:
+        type: object
+        properties:
+          cr:
+            type: object
+            description: 'Consent Record as JWS - [MyData Authorization Specification] (https://github.com/HIIT/mydata-stack)'
+
+  ConsentStatusRecord:
+    type: object
+    properties:
+      type:
+        type: string
+        description: "Resource type: 'ConsentStatusRecord'"
+      attributes:
+        type: object
+        properties:
+          csr:
+            type: object
+            description: 'Consent Status Record as JWS - [MyData Authorization Specification] (https://github.com/HIIT/mydata-stack)'
+
+  newConsentRequest:
+    type: object
+    properties:
+      data:
+        type: object
+        properties:
+          source:
+            type: object
+            properties:
+              consentRecordPayload:
+                  $ref: '#/definitions/newConsent'
+              consentStatusRecordPayload:
+                $ref: '#/definitions/newConsentStatus'
+          sink:
+            type: object
+            properties:
+              consentRecordPayload:
+                  $ref: '#/definitions/newConsent'
+              consentStatusRecordPayload:
+                $ref: '#/definitions/newConsentStatus'
+
+  newConsentResponse:
+    type: object
+    properties:
+      data:
+        type: object
+        properties:
+          source:
+            type: object
+            properties:
+              consentRecord:
+                  $ref: '#/definitions/ConsentRecord'
+              consentStatusRecord:
+                $ref: '#/definitions/ConsentStatusRecord'
+          sink:
+            type: object
+            properties:
+              consentRecord:
+                  $ref: '#/definitions/ConsentRecord'
+              consentStatusRecord:
+                $ref: '#/definitions/ConsentStatusRecord'

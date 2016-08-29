@@ -1,0 +1,60 @@
+{% extends "left-navigation.html" %}
+{% block title %}Profile{% endblock %}
+
+{% block bodycontent %}
+
+    <div id="page-wrapper" class="gray-bg">
+        <div class="row border-bottom">
+            <nav class="navbar navbar-static-top  " role="navigation" style="margin-bottom: 0">
+                <div class="navbar-header">
+                    <a class="navbar-minimalize minimalize-styl-2 btn btn-primary " href="#"><i class="fa fa-bars"></i> </a>
+                    <form role="search" class="navbar-form-custom" action="#">
+                        <div class="form-group">
+                            <input type="text" placeholder="Search for something..." class="form-control" name="top-search" id="top-search">
+                        </div>
+                    </form>
+                </div>
+                <ul class="nav navbar-top-links navbar-right">
+                    <li>
+                        <span class="m-r-sm text-muted welcome-message">MyData Account</span>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('signout') }}">
+                            <i class="fa fa-sign-out"></i> Log out
+                        </a>
+                    </li>
+                </ul>
+
+            </nav>
+        </div>
+        <div class="row wrapper border-bottom white-bg page-heading">
+            <div class="col-sm-12">
+                <h2>MyData Account</h2>
+                <h3>Home</h3>
+            </div>
+        </div>
+
+        <div class="wrapper wrapper-content">
+            <div class="animated fadeInRightBig">
+
+                <div class="row m-b-lg m-t-lg">
+
+                    <!-- User info -->
+                    <div class="col-md-12 text-center">
+                        <h2>API Key</h2>
+                        {% if current_user.is_authenticated %}
+                            <p>{{ content_data.apikey }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="footer">
+            <div class="text-center">
+                <strong>Copyright</strong> Example Company &copy; 2014-2015
+            </div>
+        </div>
+
+    </div>
+
+{% endblock %}

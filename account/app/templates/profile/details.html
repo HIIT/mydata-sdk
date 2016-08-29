@@ -1,0 +1,228 @@
+{% extends "left-navigation.html" %}
+{% block title %}Profile{% endblock %}
+
+{% block bodycontent %}
+
+    <div id="page-wrapper" class="gray-bg">
+        <div class="row border-bottom">
+            <nav class="navbar navbar-static-top  " role="navigation" style="margin-bottom: 0">
+                <div class="navbar-header">
+                    <a class="navbar-minimalize minimalize-styl-2 btn btn-primary " href="#"><i class="fa fa-bars"></i> </a>
+                    <form role="search" class="navbar-form-custom" action="#">
+                        <div class="form-group">
+                            <input type="text" placeholder="Search for something..." class="form-control" name="top-search" id="top-search">
+                        </div>
+                    </form>
+                </div>
+                <ul class="nav navbar-top-links navbar-right">
+                    <li>
+                        <span class="m-r-sm text-muted welcome-message">MyData Account</span>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('signout') }}">
+                            <i class="fa fa-sign-out"></i> Log out
+                        </a>
+                    </li>
+                </ul>
+
+            </nav>
+        </div>
+        <div class="row wrapper border-bottom white-bg page-heading">
+            <div class="col-sm-12">
+                <h2>MyData Account</h2>
+                <h3>Home</h3>
+            </div>
+        </div>
+
+        <div class="wrapper wrapper-content">
+            <div class="animated fadeInRightBig">
+
+                <div class="row m-b-lg m-t-lg">
+
+                    <!-- User info -->
+                    <div class="col-md-6">
+                        <div class="profile-image">
+                            <img alt="profile" class="img-circle circle-border m-b-md" src="{{ url_for('static', filename=current_user.avatar) }}">
+                        </div>
+                        <div class="profile-info">
+                            <div class="">
+                                <div>
+                                    <h2 class="no-margins">
+                                        {% if current_user.is_authenticated %}
+                                            {{ current_user.firstname }} {{ current_user.lastname }}
+                                        {% endif %}
+                                    </h2>
+                                    <h4>
+                                        {% if current_user.is_authenticated %}
+                                            {{ current_user.email }}
+                                        {% endif %}
+                                    </h4>
+                                    <small>
+                                        There are many variations of passages of Lorem Ipsum available, but the majority
+                                        have suffered alteration in some form Ipsum available.
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Account statics -->
+                    <div class="col-md-4">
+                        <table class="table small m-b-xs">
+                            <tbody>
+                            <tr>
+                                <td>
+                                    <strong>{{ content_data.service_link_record_count }}</strong> Service Links
+                                </td>
+                                <td>
+                                    <strong>{{ content_data.potential_services }}</strong> Potential Services
+                                </td>
+
+                            </tr>
+                            <tr>
+                                <td>
+                                    <strong>{{ content_data.consent_count }}</strong> Active Consents
+                                </td>
+                                <td>
+                                    <strong>{{ content_data.potential_consents }}</strong> Potential Consents
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <strong>{{ content_data.passive_services }}</strong> Passive Services
+                                </td>
+                                <td>
+                                    <strong>{{ content_data.passive_consents }}</strong> Passive Consents
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+
+                </div>
+
+                <div class="row">
+                    <!-- Left content -->
+                    <div class="col-md-8 border-right">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="ibox float-e-margins">
+                                    <div class="ibox-title"><i class="fa fa-map-marker"></i> Primary Address | <a href="{{ url_for('settings') }}"><i class="fa fa-gears text-right"></i></a></div>
+                                    <div class="ibox-content">
+                                        {% for contact in content_data.contacts %}
+                                            {% if contact.prime %}
+                                                <p class="">
+                                                    {{ contact.address1 }}
+                                                </p>
+                                                <p class="">
+                                                    {{ contact.address2 }}
+                                                </p>
+                                                <p class="">
+                                                    {{ contact.postal_code }}, {{ contact.city }}
+                                                </p>
+                                                <p class="">
+                                                    {{ contact.state }}, {{ contact.country }}
+                                                </p>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="ibox float-e-margins">
+                                    <div class="ibox-title">Emails | <a href="{{ url_for('settings') }}"><i class="fa fa-gears text-right"></i></a></div>
+                                    <div class="ibox-content">
+                                        <table class="table small m-b-xs">
+                                            <tbody>
+                                                {% for email in content_data.emails %}
+                                                    <tr>
+                                                        <td>{{ email.email }}</td>
+                                                        <td>
+                                                            {% if email.prime %}
+                                                                <small class="label label-primary">P</small>
+                                                            {% else %}
+                                                                <small class="label label-information">S</small>
+                                                            {% endif %}
+                                                        </td>
+                                                    </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="ibox float-e-margins">
+                                    <div class="ibox-title">Telephones | <a href="{{ url_for('settings') }}"><i class="fa fa-gears text-right"></i></a></div>
+                                    <div class="ibox-content">
+                                        <table class="table small m-b-xs">
+                                            <tbody>
+                                                {% for telephone in content_data.telephones %}
+                                                    <tr>
+                                                        <td>{{ telephone.tel }}</td>
+                                                        <td>
+                                                            {% if telephone.prime %}
+                                                                <small class="label label-primary">P</small>
+                                                            {% else %}
+                                                                <small class="label label-information">S</small>
+                                                            {% endif %}
+                                                        </td>
+                                                    </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- End of Left content -->
+                    <!-- Right content -->
+                    <div class="col-md-4">
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="ibox-content">
+                                    <h2>To complete Account</h2>
+                                    <small>This is example of small version of todo list</small>
+                                    <ul class="todo-list m-t small-list ui-sortable">
+                                        <li>
+                                            <a class="check-link" href="#"><i class="fa fa-check-square"></i> </a>
+                                            <span class="m-l-xs todo-completed">Date of Birth</span>
+
+                                        </li>
+                                        <li>
+                                            <a class="check-link" href="#"><i class="fa fa-check-square"></i> </a>
+                                            <span class="m-l-xs  todo-completed">Email address</span>
+
+                                        </li>
+                                        <li>
+                                            <a class="check-link" href="#"><i class="fa fa-square-o"></i> </a>
+                                            <span class="m-l-xs">Telephone number</span>
+                                        </li>
+                                        <li>
+                                            <a class="check-link" href="#"><i class="fa fa-square-o"></i> </a>
+                                            <span class="m-l-xs">Settings</span>
+                                        </li>
+                                        <li>
+                                            <a class="check-link" href="#"><i class="fa fa-square-o"></i> </a>
+                                            <span class="m-l-xs">Link identities</span>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- End of Right content -->
+                </div>
+            </div>
+        </div>
+        <div class="footer">
+            <div class="text-center">
+                <strong>Copyright</strong> Example Company &copy; 2014-2015
+            </div>
+        </div>
+
+    </div>
+
+{% endblock %}
