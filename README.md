@@ -17,7 +17,7 @@ Components are split to their own folders
 
 ## Deployment
 
-Deployment instructions for each component can be found in said modules documentation.
+Deployment instructions for each component can be found from module's documentation.
 
 ## Documentation
 
