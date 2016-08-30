@@ -1,21 +1,21 @@
 ---
 
 # Operator Components
-This is a part of MyData-SDK implementation of MyData Architecture.
+This is a part of MyData SDK implementation of MyData Architecture.
 
-Operator Components implements
+Operator Components implement:
 
-    Operator Linking API (Operator_SLR)
-    Operator Authorization API (Operator_CR)
+- Operator Linking API (Operator_SLR)
+- Operator Authorization API (Operator_CR)
 
 ## Prerequisites
 - [Flask](http://flask.pocoo.org/)
-- [Flask-RESTful](http://flask-restful-cn.readthedocs.org/)
+- [Flask-RESTful](http://flask-restful.readthedocs.io)
 
 
 ## Deployment
 
-- [ Documentation](doc/developer_oneliners.md)
+- [ Deployment](doc/deployment.md)
 
 ## Documentation
 - [ Documentation ](doc/)

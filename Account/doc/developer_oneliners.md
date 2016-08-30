@@ -1,4 +1,4 @@
-# Developer One-liners
+# Developer one-liners
 Note: Instructions based on Ubuntu 14.04 server
 
 

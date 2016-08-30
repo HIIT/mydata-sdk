@@ -2,20 +2,20 @@
 - [Deployment](deployment.md)
 - [API documentation](api/)
 - [Database documentation](database/)
-- [Developer One-liners](developer_oneliners.md)
+- [Developer one-liners](developer_oneliners.md)
 
 # MyData Account modules
 ## Service Linking
-Service module (mod_service) provides implementation to full fill requirements of MyData Service Linking Specification
+Service module (mod_service) provides implementation to fulfill requirements of MyData Service Linking Specification.
 
 ## Authorization
-Authorization module (mod_mod_authorization) provides implementation to full fill requirements of MyData Authorization Specification
+Authorization module (mod_mod_authorization) provides implementation to fulfill requirements of MyData Authorization Specification.
 
 ## Key Management
-Key Management module (mod_blackbox) provides key management services for MyData Account
+Key Management module (mod_blackbox) provides key management services for MyData Account.
 
 ## Database
-Database module (mod_database) provides database integration for MyData Account
+Database module (mod_database) provides database integration for MyData Account.
 
 
 

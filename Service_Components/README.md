@@ -1,22 +1,22 @@
 ---
 
 # Service Components
-This is a part of MyData-SDK implementation of MyData Architecture.
+This is a part of MyData SDK implementation of MyData Architecture.
 
-Service Components implements
+Service Components implement
  
-    Service Authorization API (Authorization_Management)
-    Service Linking API (Service_Mgmnt)
+- Service Authorisation API (Authorisation_Management)
+- Service Linking API (Service_Mgmnt)
     
 
 ## Prerequisites
 - [Flask](http://flask.pocoo.org/)
-- [Flask-RESTful](http://flask-restful-cn.readthedocs.org/)
+- [Flask-RESTful](http://flask-restful.readthedocs.io)
 
 
 ## Deployment
 
-- [ Documentation](doc/developer_oneliners.md)
+- [ Deployment ](doc/deployment.md)
 
 ## Documentation
 - [ Documentation ](doc/)

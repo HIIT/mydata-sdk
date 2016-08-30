@@ -1,3 +1,3 @@
-# Best Practices
+# Best practices
 
 TBD

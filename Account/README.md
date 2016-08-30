@@ -1,9 +1,12 @@
-# Minimum Viable Account
-This is a part of MyData-SDK implementation of MyData Architecture. This repository holds the implementation of MyData Account.
+
+---
+
+# MyData Account
+This is a part of MyData SDK implementation of MyData Architecture.
 
 ## High level prerequisites
 - [Flask](http://flask.pocoo.org/)
-- [Flask-RESTful](http://flask-restful-cn.readthedocs.org/)
+- [Flask-RESTful](http://flask-restful.readthedocs.io)
 - [JWCrypto](https://jwcrypto.readthedocs.io/en/stable/)
 - [MySQL 5.6](https://www.mysql.com/)
 - [Python 2.7](https://www.python.org/download/releases/2.7/)
@@ -13,7 +16,7 @@ This is a part of MyData-SDK implementation of MyData Architecture. This reposit
 - [Deployment](doc/deployment.md)
 - [API documentation](doc/api/)
 - [Database documentation](doc/database/)
-- [Developer One-liners](doc/developer_oneliners.md)
+- [Developer one-liners](doc/developer_oneliners.md)
 
 ## Support / Contact / Contribution
 [MyData Architecture](https://github.com/HIIT/mydata-stack)
