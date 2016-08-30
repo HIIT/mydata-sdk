@@ -6,13 +6,13 @@ This is a part of MyData-SDK implementation of MyData Architecture.
 Components are split to their own folders
 
 - [ MyData Account ](/Account/)
-- [ Operator_Components ](/Operator_Components/)
-- [ Service_Components ](/Service_Components/)
-- [ Service_Mockup ](/Service_Mockup/)
+- [ Operator Components ](/Operator_Components/)
+- [ Service Components ](/Service_Components/)
+- [ Service Mockup ](/Service_Mockup/)
 
 ## Prerequisites
 - [Flask](http://flask.pocoo.org/)
-- [Flask-RESTful](http://flask-restful-cn.readthedocs.org/)
+- [Flask-RESTful](http://flask-restful.readthedocs.org/)
 
 
 ## Deployment
