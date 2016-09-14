@@ -19,6 +19,7 @@ Components are split to their own folders
 When everything is deployed to localhost according to deployment instructions run
     python ui_flow.py
 
+
 ## Deployment
 
 Deployment instructions for each component can be found from module's documentation.
