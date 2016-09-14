@@ -17,6 +17,7 @@ Components are split to their own folders
 ## Simple Consent-flow demo
 
 When everything is deployed to localhost according to deployment instructions run
+
     python ui_flow.py
 
 
