@@ -1,5 +1,5 @@
 # Deployment
-Note: Instructions based on Ubuntu 14.04 server
+Note: Instructions based on clean Ubuntu 14.04 server
 
 
 ## Prerequisites
@@ -9,14 +9,21 @@ Note: Instructions based on Ubuntu 14.04 server
 
 ### MySQL Database
     sudo apt-get -y install mysql-server-5.6
+
+You will be prompted for prompted to create a root password during the installation. 
+These instructions are using 'Y3xUcheg' as root password.
+
+#### Securing MySQL installation
     sudo mysql_secure_installation
+
+#### Finalizing MySQL installation
     sudo service mysql restart
 
 ### System wide dependencies with apt-get
     sudo apt-get -y install build-essential
-    sudo apt-get -y install python
     sudo apt-get -y install libssl-dev
     sudo apt-get -y install libffi-dev
+    sudo apt-get -y install python
     sudo apt-get -y install python-dev
     sudo apt-get -y install python-pip
     sudo apt-get -y install libmysqlclient-dev
@@ -24,54 +31,63 @@ Note: Instructions based on Ubuntu 14.04 server
 
 
 ### System wide dependencies with pip
+    sudo pip install cryptography
     sudo pip install virtualenv
 
 
 ## Deployment
 
 ### Prepare directories
-    sudo mkdir -p /var/www/myDataAccount
-    sudo chown -R www-data /var/www/myDataAccount
-    sudo chmod 755 -R /var/www
-    cd /var/www/myDataAccount
+    cd ~
+    mkdir myDataSDK
+    cd myDataSDK
 
 ### Clone from Git
-Clone this repo.
-
-Checkout master-branch.
-    
-    cd Account
+    git clone https://github.com/HIIT/mydata-sdk.git
 
 ### Configure
 
-#### MySQL Database
-In MySQL shell
+    cd mydata-sdk
+    cd Account
 
+#### MySQL Database
+
+##### Start mysql shell
+
+    mysql -u root -pY3xUcheg
+
+##### In MySQL shell
+
+    CREATE USER 'mydataaccount'@'localhost' IDENTIFIED BY 'wr8gabrA';
     DROP DATABASE MyDataAccount;
     source doc/database/MyDataAccount-DBinit.sql
-    CREATE USER '<DATABASE_USER>'@'localhost' IDENTIFIED BY '<DATABASE_USER_PASSWORD>';
-    GRANT CREATE TEMPORARY TABLES, DELETE, DROP, INSERT, LOCK TABLES, SELECT, UPDATE ON MyDataAccount.* TO 'mydataaccount'@'localhost';
     FLUSH PRIVILEGES;
+
+##### Quit from MySQL shell
+
+    quit
 
 #### Flask App config
 Check application configuration file and modify if necessary.
 
-    sudo nano config.py
+    nano config.py
 
 #### Setup virtual environment
 
-    sudo virtualenv venv --no-site-packages
+    virtualenv venv
     source venv/bin/activate
-    pip install -r requirements.txt
+    ./venv/bin/pip install -r requirements.txt
     deactivate
 
 
 
 # Run MyData Account Application
+MyData Account can be run in development mode or in production mode.
+
 ## Development mode
 Run application in development mode at port 8080
 
-    cd /var/www/myDataAccount/mydata-sdk/Account
+    cd ~/myDataSDK/mydata-sdk/Account
     source venv/bin/activate
     python run.py
 
@@ -84,14 +100,25 @@ Run application in production mode at port 80
     sudo apt-get update
     sudo apt-get -y install nginx
     sudo pip install uwsgi
+    
+### Prepare directories
+    cd ~/myDataSDK
+    sudo mkdir -p /var/www/myDataSDK
+    sudo cp -R ./mydata-sdk/ /var/www/myDataSDK
+    sudo chown -R www-data /var/www/myDataSDK
+    sudo chmod 755 -R /var/www
 
 ### Test uWSGI serving
 
-    cd /var/www/myDataAccount/mydata-sdk/Account
+    cd /var/www/myDataSDK/mydata-sdk/Account/
     source venv/bin/activate
     sudo uwsgi --socket 0.0.0.0:8080 --protocol=http -w wsgi --virtualenv venv/ --callable app
 
 Try to access application with web-browser via (http://example.org:8080)
+
+Kill uwsgi process 
+
+    Ctrl + c
 
 Deactivate virtual environment
 
@@ -100,27 +127,20 @@ Deactivate virtual environment
 ### Configure uWSGI
 
 #### uWSGI Configuration File
-Modify application path if necessary. At least application's base path should be updated.
+Modify application's base path if necessary.
 
-    cd /var/www/myDataAccount/mydata-sdk/Account
     sudo nano uwsgi.ini
-
-#### File permissions
-Ensure ownership and access rights of application files
-
-    sudo chown www-data -R /var/www/myDataAccount/
-    suod chmod 664 -R /var/www/myDataAccount/
 
 
 #### Start uWSGI serving
 
-    cd /var/www/myDataAccount/mydata-sdk/Account
     sudo uwsgi --ini uwsgi.ini &
 
 ### Configure Nginx
 
 #### Delete default config
 
+    sudo rm /etc/nginx/sites-enabled/default
     sudo rm /etc/nginx/sites-available/default
 
 #### Add new configuration file

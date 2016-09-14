@@ -26,6 +26,15 @@ paths:
       responses:
         200:
           description: "Returns 200 OK or Error message"
+        500:
+          description: "Internal server error"
+          schema:
+            $ref: "#/definitions/errors"
+        502:
+          description: "Bad Gateway"
+          schema:
+            $ref: "#/definitions/errors"
+
   /account/{account_id}/service/{service_id}:
     get:
       tags:
@@ -48,6 +57,22 @@ paths:
       responses:
         200:
           description: "Returns 200 OK"
+        500:
+          description: "Internal server error"
+          schema:
+            $ref: "#/definitions/errors"
+        504:
+          description: "Gateway Timeout"
+          schema:
+            $ref: "#/definitions/errors"
+        503:
+          description: "Service Unavailable"
+          schema:
+            $ref: "#/definitions/errors"
+        502:
+          description: "Bad Gateway"
+          schema:
+            $ref: "#/definitions/errors"
   /verify:
     post:
       tags:
@@ -70,8 +95,34 @@ paths:
             \ successfully"
           schema:
             $ref: "#/definitions/VerifyResponse"
-
+        500:
+          description: "Internal server error"
+          schema:
+            $ref: "#/definitions/errors"
+        502:
+          description: "Bad Gateway"
+          schema:
+            $ref: "#/definitions/errors"
 definitions:
+  errors:
+      type: object
+      properties:
+        status:
+          type: string
+          description: HTTP status code as string value.
+        code:
+          type: integer
+          description: HTTP status code
+        title:
+          type: string
+          description: Title of error message.
+        detail:
+          type: string
+          description: Detailed error message.
+        source:
+          type: string
+          description: Source URI
+
   LinkParams:
     type: "object"
     properties:

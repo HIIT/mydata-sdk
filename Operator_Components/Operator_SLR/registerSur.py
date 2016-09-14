@@ -1,18 +1,21 @@
 # -*- coding: utf-8 -*-
 __author__ = 'alpaloma'
+import logging
+import traceback
 from json import loads, dumps, load, dump
-from uuid import uuid4 as guid
-from flask import request, Blueprint, current_app
-from flask_restful import Resource, Api
 from requests import post
+from uuid import uuid4 as guid
+
 from DetailedHTTPException import DetailedHTTPException, error_handler
 from Templates import ServiceRegistryHandler, Sequences
+from flask import request, Blueprint, current_app
+from flask_cors import CORS
+from flask_restful import Resource, Api
 from helpers import AccountManagerHandler, Helpers
 from jwcrypto import jwk
-import logging
 
 api_SLR_RegisterSur = Blueprint("api_SLR_RegisterSur", __name__)
-from flask_cors import CORS
+
 CORS(api_SLR_RegisterSur)
 api = Api()
 api.init_app(api_SLR_RegisterSur)
@@ -39,7 +42,8 @@ Operator_Components Mgmnt->Service_Components Mgmnt: Send created and signed SLR
 class RegisterSur(Resource):
     def __init__(self):
         super(RegisterSur, self).__init__()
-        print(current_app.config)
+        self.app = current_app
+        #print(current_app.config)
         keysize = current_app.config["KEYSIZE"]
         cert_key_path = current_app.config["CERT_KEY_PATH"]
         self.request_timeout = current_app.config["TIMEOUT"]
@@ -86,14 +90,18 @@ class RegisterSur(Resource):
         protti = {"alg": "RS256"}
         headeri = {"kid": user_account_id, "jwk": loads(operator_key.export_public())}
         self.service_registry_handler = ServiceRegistryHandler()
-        am_url = current_app.config["ACCOUNT_MANAGEMENT_URL"]
-        am_user = current_app.config["ACCOUNT_MANAGEMENT_USER"]
-        am_password = current_app.config["ACCOUNT_MANAGEMENT_PASSWORD"]
-        timeout = current_app.config["TIMEOUT"]
-        self.AM = AccountManagerHandler(am_url, am_user, am_password, timeout)
+        self.am_url = current_app.config["ACCOUNT_MANAGEMENT_URL"]
+        self.am_user = current_app.config["ACCOUNT_MANAGEMENT_USER"]
+        self.am_password = current_app.config["ACCOUNT_MANAGEMENT_PASSWORD"]
+        self.timeout = current_app.config["TIMEOUT"]
+        try:
+            self.AM = AccountManagerHandler(self.am_url, self.am_user, self.am_password, self.timeout)
+        except Exception as e:
+            debug_log.warn("Initialization of AccountManager failed. We will crash later but note it here.\n{}".format(repr(e)))
 
         self.Helpers = Helpers(current_app.config)
         self.query_db = self.Helpers.query_db
+
 
     @error_handler
     def post(self):
@@ -140,12 +148,17 @@ class RegisterSur(Resource):
                          }
 
 
-
             debug_log.info("###########Template for Account Manager#")
             debug_log.info(dumps(template, indent=3))
             debug_log.info("########################################")
             sq.send_to("Account Manager", "Sign SLR at Account Manager")
-            reply = self.AM.sign_slr(template, account_id)
+            try:
+                reply = self.AM.sign_slr(template, account_id)
+            except AttributeError as e:
+                raise DetailedHTTPException(status=502,
+                                            title="It would seem initiating Account Manager Handler has failed.",
+                                            detail="Account Manager might be down or unresponsive.",
+                                            trace=traceback.format_exc(limit=100).splitlines())
             debug_log.info(dumps(reply, indent=2))
 
             # Parse JSON form Account Manager to format Service_Mgmnt understands.
@@ -158,7 +171,9 @@ class RegisterSur(Resource):
 
                 debug_log.info("SLR O: {}".format(dumps(req, indent=3)))
             except Exception as e:
-                raise DetailedHTTPException(exception=e, detail="Parsing JSON form Account Manager to format Service_Mgmnt understands has failed.")
+                raise DetailedHTTPException(exception=e,
+                                            detail="Parsing JSON form Account Manager to format Service_Mgmnt understands has failed.",
+                                            trace=traceback.format_exc(limit=100).splitlines())
 
 
 
@@ -176,12 +191,14 @@ class RegisterSur(Resource):
             except DetailedHTTPException as e:
                 raise e
             except Exception as e:
-                raise DetailedHTTPException(exception=e, detail="Sending SLR to service has failed")
+                raise DetailedHTTPException(exception=e, detail="Sending SLR to service has failed",
+                                            trace=traceback.format_exc(limit=100).splitlines())
 
 
         except DetailedHTTPException as e:
             raise e
         except Exception as e:
-            raise DetailedHTTPException(title="Creation of SLR has failed.", exception=e)
+            raise DetailedHTTPException(title="Creation of SLR has failed.", exception=e,
+                                        trace=traceback.format_exc(limit=100).splitlines())
 
 api.add_resource(RegisterSur, '/link')

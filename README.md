@@ -14,6 +14,10 @@ Components are split to their own folders
 - [Flask](http://flask.pocoo.org/)
 - [Flask-RESTful](http://flask-restful.readthedocs.org/)
 
+## Simple Consent-flow demo
+
+When everything is deployed to localhost according to deployment instructions run
+    python ui_flow.py
 
 ## Deployment
 

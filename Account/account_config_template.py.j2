@@ -6,7 +6,7 @@ from os import urandom
 DEBUG = True
 
 # Enable more detailed logging
-SUPER_DEBUG = False
+SUPER_DEBUG = True
 
 
 # Application URL prefix
@@ -24,6 +24,7 @@ LOG_FORMATTER = '%(asctime)s - %(name)s in function %(funcName)s at line: %(line
 LOG_PATH = './logs/'
 LOG_FILE = LOG_PATH + 'account.log'
 LOG_TO_FILE = False
+
 
 # Define the application directory
 import os
@@ -68,6 +69,14 @@ MYSQL_PORT = {{ MYSQL_PORT }}
 MYSQL_PORT = 3306
 {% endif %}
 
+# Server for url_for -function with external=true parameters
+#{% if SERVER_NAME is defined %}
+#SERVER_NAME = {{ SERVER_NAME }}
+#{% else %}
+#SERVER_NAME = ''
+#{% endif %}
+
+
 #MYSQL_UNIX_SOCKET = ''  # Location of UNIX socket. Default: use default location or TCP for remote hosts.
 #MYSQL_CONNECT_TIMEOUT = '10'  # Abort if connect is not completed within given number of seconds. Default: 10
 #MYSQL_READ_DEFAULT_FILE = ''  # MySQL configuration file to read, see the MySQL documentation for mysql_options().
@@ -88,12 +97,10 @@ CSRF_ENABLED = True
 
 # Use a secure, unique and absolutely secret key for
 # signing the data.
-#CSRF_SESSION_KEY = str(urandom(24)) # TODO
-CSRF_SESSION_KEY = "salainen"
+CSRF_SESSION_KEY = str(urandom(24))
 
 # Secret key for signing cookies
-#SECRET_KEY = str(urandom(24)) # TODO
-SECRET_KEY = "Salaisempi"
+SECRET_KEY = str(urandom(24))
 
 # http://flask-restful-cn.readthedocs.org/en/0.3.5/reqparse.html#error-handling
 BUNDLE_ERRORS = True

@@ -39,7 +39,7 @@ def create_celery_app(app=None):
         app = app
     else:
         app, apis = create_app('operator_component', os.path.dirname(__file__))
-    celery = Celery(__name__, broker=app.config['CELERY_BROKER_URL'])
+    celery = Celery(__name__, broker=app.config['SELERY_BROKER_URL'])
     celery.conf.update(app.config)
     TaskBase = celery.Task
 

@@ -1,29 +1,28 @@
 # -*- coding: utf-8 -*-
 __author__ = 'alpaloma'
+import logging
 import time
-from sqlite3 import OperationalError, IntegrityError
+import traceback
 from base64 import urlsafe_b64decode as decode
 from json import loads, dumps, load, dump
-from uuid import uuid4 as guid
-from flask import request, abort, Blueprint, current_app
-from flask_restful import Resource, Api
-from jwcrypto import jws, jwk
 from requests import post
-#from settings import operator_url, service_url, cert_path, cert_key_path, keysize
+from uuid import uuid4 as guid
+
 from DetailedHTTPException import DetailedHTTPException, error_handler
-import db_handler as db_handler
-import logging
 from Templates import Sequences
+from flask import request, abort, Blueprint, current_app
+from flask_cors import CORS
+from flask_restful import Resource, Api
 from helpers import Helpers
+from jwcrypto import jws, jwk
 
 api_Service_Mgmnt = Blueprint("api_Service_Mgmnt", __name__)
-from flask_cors import CORS
+
 CORS(api_Service_Mgmnt)
 api = Api()
 api.init_app(api_Service_Mgmnt)
 logger = logging.getLogger("sequence")
 debug_log = logging.getLogger("debug")
-
 
 sq = Sequences("Service_Components Mgmnt", {})
 
@@ -31,6 +30,7 @@ sq = Sequences("Service_Components Mgmnt", {})
 
 
 '''
+
 
 def timeme(method):
     def wrapper(*args, **kw):
@@ -49,10 +49,10 @@ class GenCode(Resource):
         super(GenCode, self).__init__()
         self.helpers = Helpers(current_app.config)
         self.storeCode = self.helpers.storeCode
-    #@timeme
-    #@error_handler
+
+    @error_handler
     def get(self):
-        #try:
+        try:
             sq.task("Generate code")
             code = str(guid())
             code_storage = {code: "{}{}".format("!", code)}
@@ -60,11 +60,11 @@ class GenCode(Resource):
             self.storeCode(code_storage)
             sq.reply_to("Operator_Components Mgmnt", "Returning code")
             return {'code': code}
-        #except Exception as e:
-        #    raise e
-        #    raise DetailedHTTPException(exception=e,
-        #                                detail={"msg": "Most likely storing code failed.", "code_json": code_storage},
-        #                                title="Failure in GenCode endpoint")
+        except Exception as e:
+            raise DetailedHTTPException(exception=e,
+                                        detail={"msg": "Most likely storing code failed.", "code_json": code_storage},
+                                        title="Failure in GenCode endpoint",
+                                        trace=traceback.format_exc(limit=100).splitlines())
 
 
 class UserAuthenticated(Resource):
@@ -96,6 +96,7 @@ class UserAuthenticated(Resource):
         self.service_url = current_app.config["SERVICE_URL"]
         self.operator_url = current_app.config["OPERATOR_URL"]
         self.helpers = Helpers(current_app.config)
+
     @timeme
     @error_handler
     def post(self):
@@ -118,25 +119,30 @@ class UserAuthenticated(Resource):
             result_service = post("{}{}".format(self.service_url, endpoint), json=content_json)
             if not result_service.ok:
                 raise DetailedHTTPException(status=result_service.status_code,
-                                            detail={"msg": "Something went wrong while posting to Service_Components for /link",
-                                                    "Error from Service_Components": loads(result_service.text)},
+                                            detail={
+                                                "msg": "Something went wrong while posting to Service_Components for /link",
+                                                "Error from Service_Components": loads(result_service.text)},
                                             title=result_service.reason)
 
             sq.send_to("Operator_Components Mgmnt", "Send Operator_Components request to make SLR")
-            endpoint= "/api/1.2/slr/link"
+            endpoint = "/api/1.2/slr/link"
             result = post("{}{}".format(self.operator_url, endpoint), json=data)
             debug_log.info("####slr/link reply from operator: {}\n{}".format(result.status_code, result.text))
             if not result.ok:
                 raise DetailedHTTPException(status=result.status_code,
-                                            detail={"msg": "Something went wrong while posting to Operator_SLR for /link",
-                                                    "Error from Operator_SLR": loads(result.text)},
+                                            detail={
+                                                "msg": "Something went wrong while posting to Operator_SLR for /link",
+                                                "Error from Operator_SLR": loads(result.text)},
                                             title=result.reason)
 
         except DetailedHTTPException as e:
+            e.trace = traceback.format_exc(limit=100).splitlines()
             raise e
         except Exception as e:
             raise DetailedHTTPException(exception=e,
-                                        detail="Something failed in generating and delivering Surrogate_ID.")
+                                        detail="Something failed in generating and delivering Surrogate_ID.",
+                                        trace=traceback.format_exc(limit=100).splitlines())
+
 
 class SignInRedirector(Resource):
     def __init__(self):
@@ -163,9 +169,12 @@ class SignInRedirector(Resource):
                                                     "Error from Service_Components": loads(result.text)},
                                                 title=result.reason)
             except DetailedHTTPException as e:
+                e.trace = traceback.format_exc(limit=100).splitlines()
                 raise e
             except Exception as e:
-                raise DetailedHTTPException(exception=e, detail="Failed to POST code/user to Service_Components's /login")
+                raise DetailedHTTPException(exception=e,
+                                            detail="Failed to POST code/user to Service_Components's /login",
+                                            trace=traceback.format_exc(limit=100).splitlines())
         else:
             abort(403)
 
@@ -270,7 +279,8 @@ class StoreSLR(Resource):
             content = decode(payload.encode())
 
             sq.task("Load decoded payload as python dict")
-            payload = loads(loads(content.decode("utf-8"))) # TODO: Figure out why we get str out of loads the first time?
+            payload = loads(
+                loads(content.decode("utf-8")))  # TODO: Figure out why we get str out of loads the first time?
             debug_log.info(payload)
             debug_log.info(type(payload))
 
@@ -285,7 +295,9 @@ class StoreSLR(Resource):
             debug_log.info("Surrogate was found: {}".format(self.helpers.verifySurrogate(code, surrogate_id)))
 
         except Exception as e:
-            raise DetailedHTTPException(title="Verifying Surrogate ID failed", exception=e)
+            raise DetailedHTTPException(title="Verifying Surrogate ID failed",
+                                        exception=e,
+                                        trace=traceback.format_exc(limit=100).splitlines())
 
         try:
             sq.task("Create empty JSW object")
@@ -303,7 +315,9 @@ class StoreSLR(Resource):
             debug_log.info(verifyJWS(slr))
             verify = jwssa.verify(sign_key)  # Verifying changes the state of this object
         except Exception as e:
-            raise DetailedHTTPException(title="Verifying JWS signature failed", exception=e)
+            raise DetailedHTTPException(title="Verifying JWS signature failed",
+                                        exception=e,
+                                        trace=traceback.format_exc(limit=100).splitlines())
 
         try:
             sq.task("Fix possible serialization errors in JWS")
@@ -316,13 +330,16 @@ class StoreSLR(Resource):
 
             sq.task("Fix possible header errors")
             fixed = header_fix(loads(jwssa.serialize(compact=False)))
-            debug_log.info("{}\n{}\n{}".format("Verified and Signed Signature:\n", dumps(fixed, indent=3), "\n###### END OF SIGNATURE #######"))
+            debug_log.info("{}\n{}\n{}".format("Verified and Signed Signature:\n", dumps(fixed, indent=3),
+                                               "\n###### END OF SIGNATURE #######"))
 
             sq.task("Create template for verifying JWS at Operator_Components")
             req = {"data": {"code": code}, "slr": fixed}
             debug_log.info(dumps(req, indent=2))
         except Exception as e:
-            raise DetailedHTTPException(exception=e, title="JWS fix and subsequent signing of JWS with out key failed.")
+            raise DetailedHTTPException(exception=e,
+                                        title="JWS fix and subsequent signing of JWS with out key failed.",
+                                        trace=traceback.format_exc(limit=100).splitlines())
 
         sq.send_to("Operator_Components Mgmnt", "Verify SLR(JWS)")
         endpoint = "/api/1.2/slr/verify"
@@ -335,7 +352,7 @@ class StoreSLR(Resource):
             debug_log.debug(dumps(store, indent=2))
             self.helpers.storeJSON({store["data"]["surrogate_id"]: store})
             endpoint = "/api/1.2/slr/store_slr"
-            result = post("{}{}".format(self.service_url, endpoint), json=store) # Send copy to Service_Components
+            result = post("{}{}".format(self.service_url, endpoint), json=store)  # Send copy to Service_Components
         else:
             debug_log.debug(result.reason)
             raise DetailedHTTPException(status=result.status_code,
@@ -352,13 +369,13 @@ class StoreSLR(Resource):
         for storage_row in self.helpers.query_db("select * from storage;"):
             debug_log.info(storage_row["json"])
             jsons["jsons"][storage_row["surrogate_id"]] = loads(storage_row["json"])
-            counter=+1
+            counter = +1
 
         sq.reply_to("Operator_Components Mgmnt", "Return SLR's from db")
         return jsons
+
 
 api.add_resource(GenCode, '/code')
 api.add_resource(SignInRedirector, '/login')
 api.add_resource(UserAuthenticated, '/auth')
 api.add_resource(StoreSLR, '/slr')
-

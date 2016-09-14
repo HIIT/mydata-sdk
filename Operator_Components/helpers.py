@@ -33,7 +33,6 @@ def read_key(path, password=None, ):
         password = password.strip("\n")
 
     from jwcrypto import jwk
-    import jwkest
     from jwkest.jwk import RSAKey
     with open(path, "r") as f:
         pem_data = f.read()
@@ -364,8 +363,8 @@ class Helpers:
         _rules = []
         common_CR["subject_id"] = consent_form["sink"]["service_id"]
 
-        # This abomination iters trough all datasets, iters though all purposes in those data sets, and add title to
-        # _rules. It seems to be enough efficient for this purpose, I doubt it would be a bottleneck.
+        # This iters trough all datasets, iters though all purposes in those data sets, and add title to
+        # _rules. It seems to be enough efficient for this purpose.
         [[_rules.append(purpose["title"]) for purpose in dataset["purposes"]  # 2
           if purpose["selected"] == True or purpose["required"] == True]  # 3
          for dataset in consent_form["sink"]["dataset"]]  # 1

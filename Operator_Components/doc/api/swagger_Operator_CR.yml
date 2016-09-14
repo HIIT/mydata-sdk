@@ -79,7 +79,18 @@ paths:
       responses:
         200:
           description: "Returns 200 OK or Error message"
-
+        500:
+          description: "Internal server error"
+          schema:
+            $ref: "#/definitions/errors"
+        502:
+          description: "Bad Gateway"
+          schema:
+            $ref: "#/definitions/errors"
+        403:
+          description: "Forbidden"
+          schema:
+            $ref: "#/definitions/errors"
   /auth_token/{cr_id}:
     get:
       tags:
@@ -98,10 +109,36 @@ paths:
           description: "returns 200 OK and Auth Token, or Error message"
           schema:
             $ref: "#/definitions/Auth_TokenReply"
-
+        500:
+          description: "Internal server error"
+          schema:
+            $ref: "#/definitions/errors"
+        502:
+          description: "Bad Gateway"
+          schema:
+            $ref: "#/definitions/errors"
 
 
 definitions:
+  errors:
+      type: object
+      properties:
+        status:
+          type: string
+          description: HTTP status code as string value.
+        code:
+          type: integer
+          description: HTTP status code
+        title:
+          type: string
+          description: Title of error message.
+        detail:
+          type: string
+          description: Detailed error message.
+        source:
+          type: string
+          description: Source URI
+
   Auth_TokenReply:
     type: object
     properties:
@@ -156,6 +193,7 @@ definitions:
         description: string containing description
       keyword:
         type: array
+
 
       title:
         type: string

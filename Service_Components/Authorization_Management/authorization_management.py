@@ -1,28 +1,26 @@
 # -*- coding: utf-8 -*-
 __author__ = 'alpaloma'
-import time, os
-from sqlite3 import OperationalError, IntegrityError
-from base64 import urlsafe_b64decode as decode
-from json import loads, dumps, load, dump
-from uuid import uuid4 as guid
-
-from flask import request, Blueprint, current_app
-from flask_restful import Resource, Api
-from jwcrypto import jws, jwk
-from requests import post
+import logging
+import os
+import time
+from json import loads, dumps
 
 from DetailedHTTPException import DetailedHTTPException, error_handler
-import db_handler as db_handler
-
-api_Service_Mgmnt = Blueprint("api_Service_Mgmnt", __name__) # TODO Rename this
+from Templates import sink_cr_schema, source_cr_schema, csr_schema, Sequences
+from flask import request, Blueprint, current_app
 from flask_cors import CORS
+from flask_restful import Resource, Api
+from helpers import validate_json, SLR_tool, CR_tool, Helpers
+from jwcrypto import jwk
+from tasks import get_AuthToken
+
+api_Service_Mgmnt = Blueprint("api_Service_Mgmnt", __name__)  # TODO Rename this
+
 CORS(api_Service_Mgmnt)
 api = Api()
 api.init_app(api_Service_Mgmnt)
 
 file_store = os.path.abspath("file_store/") + "/"  # os.path.abspath seems to skim the / away from the end.
-
-
 
 '''
 
@@ -53,11 +51,9 @@ templ = {Service_ID: {"cr_keys": loads(token_key.export_public())}}
 protti = {"alg": "ES256"}
 headeri = {"kid": Service_ID, "jwk": loads(service_key.export_public())}
 
-import logging
 logger = logging.getLogger("sequence")
 debug_log = logging.getLogger("debug")
 
-from Templates import Sequences
 sq = Sequences("Service_Components Mgmnt", {})
 
 
@@ -72,10 +68,7 @@ def timeme(method):
 
     return wrapper
 
-from Templates import sink_cr_schema, source_cr_schema, csr_schema
-from helpers import validate_json, SLR_tool, CR_tool, Helpers
-from tasks import get_AuthToken
-import jsonschema
+
 class Install_CR(Resource):
     def __init__(self):
         super(Install_CR, self).__init__()
@@ -106,7 +99,8 @@ class Install_CR(Resource):
             for e in errors:
                 raise DetailedHTTPException(detail={"msg": "Validating Source CR format and fields failed",
                                                     "validation_errors": errors},
-                                            title="Failure in CR validation")
+                                            title="Failure in CR validation",
+                                            status=400)
 
 
         else:
@@ -115,11 +109,11 @@ class Install_CR(Resource):
             for e in errors:
                 raise DetailedHTTPException(detail={"msg": "Validating Sink CR format and fields failed",
                                                     "validation_errors": errors},
-                                            title="Failure in CR validation")
+                                            title="Failure in CR validation",
+                                            status=400)
 
         debug_log.info(dumps(crt.get_CR_payload(), indent=2))
         debug_log.info(dumps(crt.get_CSR_payload(), indent=2))
-
 
         sq.task("Verify CR integrity")
         # SLR includes CR keys which means we need to get key from stored SLR and use it to verify this
@@ -127,7 +121,6 @@ class Install_CR(Resource):
         surr_id = crt.get_surrogate_id()
         slr_id = crt.get_slr_id()
         debug_log.info("Fetched surr_id({}) and slr_id({})".format(surr_id, slr_id))
-
 
         slrt = SLR_tool()
         slrt.slr = self.helpers.get_slr(surr_id)
@@ -137,7 +130,8 @@ class Install_CR(Resource):
             debug_log.info("CR was verified with key from SLR")
         else:
             raise DetailedHTTPException(detail={"msg": "Verifying CR failed",},
-                                        title="Failure in CR verifying")
+                                        title="Failure in CR verifying",
+                                        status=451)
 
         sq.task("Verify CSR integrity")
         # SLR includes CR keys which means we need to get key from stored SLR and use it to verify this
@@ -147,7 +141,8 @@ class Install_CR(Resource):
             debug_log.info("CSR was verified with key from SLR")
         else:
             raise DetailedHTTPException(detail={"msg": "Verifying CSR failed",},
-                                        title="Failure in CSR verifying")
+                                        title="Failure in CSR verifying",
+                                        status=451)
 
         sq.task("Verify Status Record")
 
@@ -156,21 +151,24 @@ class Install_CR(Resource):
         for e in errors:
             raise DetailedHTTPException(detail={"msg": "Validating CSR format and fields failed",
                                                 "validation_errors": errors},
-                                        title="Failure in CSR validation")
+                                        title="Failure in CSR validation",
+                                        status=400)
         # 1) CSR has link to CR
         csr_has_correct_cr_id = crt.cr_id_matches_in_csr_and_cr()
         if csr_has_correct_cr_id:
             debug_log.info("Verified CSR links to CR")
         else:
             raise DetailedHTTPException(detail={"msg": "Verifying CSR cr_id == CR cr_id failed",},
-                                        title="Failure in CSR verifying")
+                                        title="Failure in CSR verifying",
+                                        status=451)
         # 2) CSR has link to previous CSR
         prev_csr_id_refers_to_null_as_it_should = crt.get_prev_record_id() == "null"
         if prev_csr_id_refers_to_null_as_it_should:
             debug_log.info("prev_csr_id_referred to null as it should.")
         else:
             raise DetailedHTTPException(detail={"msg": "Verifying CSR previous_id == 'null' failed",},
-                                        title="Failure in CSR verifying")
+                                        title="Failure in CSR verifying",
+                                        status=451)
 
         verify_is_success = crt.verify_cr(slrt.get_cr_keys())
         if verify_is_success:
@@ -189,7 +187,7 @@ class Install_CR(Resource):
             "cr_id": crt.get_cr_id_from_cr(),
             "surrogate_id": surr_id,
             "slr_id": crt.get_slr_id(),
-            "json": crt.get_CR_payload() # possibly store the base64 representation
+            "json": crt.get_CR_payload()  # possibly store the base64 representation
         }
         self.helpers.storeCR_JSON(store_dict)
 
@@ -200,8 +198,9 @@ class Install_CR(Resource):
             get_AuthToken.delay(crt.get_cr_id_from_cr(), self.operator_url)
         return {"status": 200, "msg": "OK"}, 200
 
+
 api.add_resource(Install_CR, '/add_cr')
 
 
-#if __name__ == '__main__':
+# if __name__ == '__main__':
 #    app.run(debug=True, port=7000, threaded=True)

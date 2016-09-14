@@ -1,23 +1,25 @@
 # -*- coding: utf-8 -*-
 __author__ = 'alpaloma'
+import logging
+import traceback
+from base64 import urlsafe_b64decode as decode
 from json import loads, dumps
 from uuid import uuid4 as guid
-from flask import request, Blueprint, current_app
-from flask_restful import Resource, Api
-from jwcrypto import jws, jwk
-from requests import get, post
-from flask_cors import CORS
+
 from DetailedHTTPException import DetailedHTTPException, error_handler
 from Templates import Sequences
+from flask import request, Blueprint, current_app
+from flask_cors import CORS
+from flask_restful import Resource, Api
 from helpers import AccountManagerHandler, Helpers
-from base64 import urlsafe_b64decode as decode
+from jwcrypto import jws, jwk
+
 api_SLR_Verify = Blueprint("api_SLR_blueprint", __name__)
 
 CORS(api_SLR_Verify)
 api = Api()
 api.init_app(api_SLR_Verify)
 
-import logging
 logger = logging.getLogger("sequence")
 debug_log = logging.getLogger("debug")
 logger.setLevel(logging.INFO)
@@ -45,6 +47,7 @@ request_timeout = 20
 SUPER_DEBUG = True
 account_id = "ACC-ID-RANDOM"
 user_account_id = account_id + "_" + str(guid())
+
 
 ##### Here some functions to help with verifying SLR(JWS)
 
@@ -94,15 +97,21 @@ def header_fix(malformed_dictionary):  # We do not check if its malformed, we ex
         return malformed_dictionary
     raise ValueError("Received dictionary was not expected type.")
 
+
 class VerifySLR(Resource):
     def __init__(self):
         super(VerifySLR, self).__init__()
-        am_url = current_app.config["ACCOUNT_MANAGEMENT_URL"]
-        am_user = current_app.config["ACCOUNT_MANAGEMENT_USER"]
-        am_password = current_app.config["ACCOUNT_MANAGEMENT_PASSWORD"]
-        timeout = current_app.config["TIMEOUT"]
+        self.app = current_app
+        self.am_url = current_app.config["ACCOUNT_MANAGEMENT_URL"]
+        self.am_user = current_app.config["ACCOUNT_MANAGEMENT_USER"]
+        self.am_password = current_app.config["ACCOUNT_MANAGEMENT_PASSWORD"]
+        self.timeout = current_app.config["TIMEOUT"]
+        try:
+            self.AM = AccountManagerHandler(self.am_url, self.am_user, self.am_password, self.timeout)
+        except Exception as e:
+            debug_log.warn(
+                "Initialization of AccountManager failed. We will crash later but note it here.\n{}".format(repr(e)))
 
-        self.AM = AccountManagerHandler(am_url, am_user, am_password, timeout)
         self.Helpers = Helpers(current_app.config)
         self.query_db = self.Helpers.query_db
 
@@ -139,10 +148,10 @@ class VerifySLR(Resource):
             # Verify SLR with key from Service_Components Management
             ##
             sq.task("Load account_id from database")
-            for code_json in self.query_db("select * from session_store where code = ?;", [request.json["data"]["code"]]):
+            for code_json in self.query_db("select * from session_store where code = ?;",
+                                           [request.json["data"]["code"]]):
                 debug_log.debug("{}  {}".format(type(code_json), code_json))
                 account_id = loads(code_json["json"])["account_id"]
-
 
             debug_log.info("################Verify########################")
             debug_log.info(dumps(request.json))
@@ -153,22 +162,30 @@ class VerifySLR(Resource):
             code = request.json["data"]["code"]
 
             sq.send_to("Account Manager", "Verify SLR at Account Manager.")
-            reply = self.AM.verify_slr(payload, code, slr, account_id)
+            try:
+                reply = self.AM.verify_slr(payload, code, slr, account_id)
+            except AttributeError as e:
+                raise DetailedHTTPException(status=502,
+                                            title="It would seem initiating Account Manager Handler has failed.",
+                                            detail="Account Manager might be down or unresponsive.",
+                                            trace=traceback.format_exc(limit=100).splitlines())
             if reply.ok:
                 sq.reply_to("Service_Components Mgmnt", "201, SLR VERIFIED")
                 debug_log.info(reply.text)
                 return reply.text, reply.status_code
             else:
                 raise DetailedHTTPException(status=reply.status_code,
-                                            detail={"msg": "Something went wrong while verifying SLR at Account Manager",
-                                                    "content": reply.json()},
-                                            title = reply.reason
+                                            detail={
+                                                "msg": "Something went wrong while verifying SLR at Account Manager",
+                                                "content": reply.json()},
+                                            title=reply.reason
                                             )
         except DetailedHTTPException as e:
             raise e
 
         except Exception as e:
-            raise DetailedHTTPException(status=501, detail="Verifying SLR failed for unknown reason, access is denied.")
+            raise DetailedHTTPException(exception=e,
+                                        detail="Verifying SLR failed for unknown reason, access is denied.")
 
 
 api.add_resource(VerifySLR, '/verify')
