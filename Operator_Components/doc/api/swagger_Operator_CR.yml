@@ -193,6 +193,8 @@ definitions:
         description: string containing description
       keyword:
         type: array
+        items:
+          type: string
 
 
       title:
