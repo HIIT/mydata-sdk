@@ -16,7 +16,7 @@ host: 127.0.0.1:8080
 schemes:
   - https
 
-basePath: '/api/external/'
+basePath: '/api'
 
 consumes:
   - application/json
@@ -41,7 +41,7 @@ externalDocs:
 
 paths:
 
-  /auth/account/:
+  /auth/user/:
     get:
       security:
         - BasicAuth: []
