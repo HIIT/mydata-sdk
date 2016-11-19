@@ -1,0 +1,93 @@
+# MIT License
+#
+# Copyright (c) 2016 Aleksi Palomäki
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+The ``json_builder` module
+======================
+
+Using ``hash``
+-------------------
+
+First import
+``hash_params`` from the ``json_builder`` module:
+
+    >>> from json_builder import hash_params
+
+Create hash_params object:
+    >>> jsb = hash_params()
+
+Now use it with string:
+
+    >>> jsb.hash("b=bar&a=foo&c=duck")
+    'u4LgkGUWhP9MsKrEjA4dizIllDXluDku6ZqCeyuR-JY'
+
+Now use it with list:
+
+    >>> jsb.hash([["b","bar"],["a","foo"],["c","duck"]])
+    'u4LgkGUWhP9MsKrEjA4dizIllDXluDku6ZqCeyuR-JY'
+
+Now use it with list and dict:
+
+    >>> jsb.hash(["b", "a", "c"], {"a":"foo","c":"duck", "b":"bar"})
+    'u4LgkGUWhP9MsKrEjA4dizIllDXluDku6ZqCeyuR-JY'
+
+The ``signed_request_auth`` module
+======================
+
+Using ``SignedRequest``
+-------------------
+Imports and make a key
+    >>> import requests
+    >>> from signed_request_auth import SignedRequest
+    >>> from jwcrypto import jwk
+    >>> key = jwk.JWK.generate(kty='oct', size=256)
+
+Form most request that gets PoP Authorization header and check that it can be generated
+    >>> req = requests.Request("GET", "http://localhost/", auth=SignedRequest(token="blaa", key=key, sign_query=True), params={"a": "foo", "b": "bar", "c": "duck"})
+    >>> req.prepare() # doctest: +ELLIPSIS
+    <PreparedRequest [GET]>
+    >>> header = req.__dict__["auth"].generate_authorization_header()
+    >>> header # doctest: +ELLIPSIS
+    'PoP eyJ...'
+
+Import pop_handler and test generated pop with it.
+    >>> from json_builder import pop_handler
+    >>> token = header.split(" ")[1]
+    >>> poppi = pop_handler(token=token, key=key)
+    >>> poppi.get_at() # doctest: +ELLIPSIS
+    '{"q": [["a", "c", "b"], "A7zM9tEc3J__xtM6rPf7veMqpehXtSoD3tJMS2OUDTs"], "at": "blaa", "ts": ...}'
+
+
+
+
+This part is just to ease up seeing actual test results via copy&paste
+
+import requests
+from signed_request_auth import SignedRequest
+from jwcrypto import jwk
+key = jwk.JWK.generate(kty='oct', size=256)
+req = requests.Request("GET", "http://requestb.in/19w0mpv1", auth=SignedRequest(token="blaa", key=key, sign_query=True, sign_method=True, sign_path=True), params={"a": "foo", "b": "bar", "c": "duck"})
+req.prepare() # doctest: +ELLIPSIS
+header = req.__dict__["auth"].generate_authorization_header()
+from json_builder import pop_handler
+token = header.split(" ")[1]
+poppi = pop_handler(token=token, key=key)
+poppi.get_at()

@@ -99,27 +99,35 @@ def get_account_api_key(account_id=None):
     :param account_id:
     :return: API Key
     """
+    logger.info("Get Account APIKey by Account ID")
+
     if account_id is None:
         raise AttributeError("Provide account_id as parameter")
 
     try:
+        logger.info("Getting DB connection")
         connection = get_sqlite_connection()
     except Exception as exp:
         exp = append_description_to_exception(exp=exp, description='Could not get connection SQL database.')
         logger.error('Could not get connection SQL database: ' + repr(exp))
         raise
+    else:
+        logger.info("Got DB connection")
 
     try:
+        logger.info("Getting DB cursor")
         cursor, connection = get_sqlite_cursor(connection=connection)
     except Exception as exp:
         exp = append_description_to_exception(exp=exp, description='Could not get cursor for database connection')
         logger.error('Could not get cursor for database connection: ' + repr(exp))
         raise
+    else:
+        logger.info("Got DB cursor")
 
     try:
         cursor, api_key = get_api_key(account_id=account_id, cursor=cursor)
     except Exception as exp:
-        exp = append_description_to_exception(exp=exp, description='Could not API key from database')
+        exp = append_description_to_exception(exp=exp, description='Could not find API key from database')
         logger.error('Could not get API key from database: ' + repr(exp))
         connection.rollback()
         connection.close()
@@ -155,6 +163,7 @@ def get_account_id_by_api_key(api_key=None):
         raise
 
     try:
+        logger.info("Fetching Account ID")
         cursor, account_id = get_account_id(api_key=api_key, cursor=cursor)
     except Exception as exp:
         exp = append_description_to_exception(exp=exp, description='Could not Account ID from database')
@@ -164,11 +173,13 @@ def get_account_id_by_api_key(api_key=None):
         raise
     else:
         connection.close()
-        logger.debug('Account ID fetched')
+        logger.info('Account ID fetched')
+        logger.info('account_id: ' + str(account_id))
         return account_id
 
 
 def check_api_auth_user(api_key):
+    logger.info("Checking Api-Key")
     try:
         logger.debug("Fetching Account ID")
         account_id = get_account_id_by_api_key(api_key=api_key)
@@ -220,17 +231,21 @@ def requires_api_auth_user(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         api_key = None
+        logger.info("Verifying Api-Key")
         try:
             api_key = request.headers.get('Api-Key')
             if api_key is None:
-                raise AttributeError('No API Key in Request Headers')
+                raise AttributeError('No Api-Key in Request Headers')
         except Exception as exp:
-            logger.debug("No ApiKey in headers: " + repr(exp))
+            logger.debug("No Api-Key in headers: " + repr(exp))
             return provideApiKey()
         else:
+            logger.info("Provided Api-Key: " + str(api_key))
             if not check_api_auth_user(api_key=api_key):
-                logger.debug("Wrong API Key")
+                logger.debug("Wrong Api-Key")
                 return wrongApiKey()
+            logger.info("Correct Api-Key")
+            logger.info("User Authenticated")
             return f(*args, **kwargs)
     return decorated
 

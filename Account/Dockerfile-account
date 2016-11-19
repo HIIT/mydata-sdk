@@ -1,0 +1,98 @@
+FROM python:2.7
+MAINTAINER hjhsalo <hjhsalo@gmail.com>
+
+# NOTE: Baseimage python:2.7 already contains latest pip
+
+# TODO: Compile cryptography (and everything else pip related) elsewhere and 
+# get rid of "build-essential libssl-dev libffi-dev python-dev"
+# Maybe according to these instructions: 
+# https://glyph.twistedmatrix.com/2015/03/docker-deploy-double-dutch.html
+
+# TODO: Double check and think about the order of commands. Should application 
+# specific stuff be moved to the end of the file? 
+# What are actually application specific? etc.
+
+# TODO: Have brainstorming session on how to properly setup EXPOSE ports, hosts, etc.
+# Now it is difficult to come up with sensible defaults.
+# Remember to check out what Docker Compose offers.
+
+# TODO: Make a new user and usergroup.
+# Now everything including the ENTRYPOINT is being run as root which is bad
+# practise and for example uWSGI complains about this.
+
+###
+# Install 
+# Specific structure where a single RUN is used to execute everything.
+# Based on Docker Best practices -document. To force cache busting.
+# https://docs.docker.com/engine/userguide/eng-image/dockerfile_best-practices/#/apt-get
+# NOTE: python-mysql.connector is MyData Account specific dependency.
+RUN apt-get update && apt-get install -y \
+    build-essential \
+	libffi-dev \
+    libssl-dev \
+	python-dev \
+    python-mysql.connector \
+ && rm -rf /var/lib/apt/lists/*
+
+ 
+###
+# Install application specific Python-dependencies.
+
+# NOTE: If you have multiple Dockerfile steps that use different files from 
+# your context, COPY them individually, rather than all at once. This will 
+# ensure that each step’s build cache is only invalidated (forcing the step 
+# to be re-run) if the specifically required files change.
+# https://docs.docker.com/engine/userguide/eng-image/dockerfile_best-practices/#/add-or-copy
+COPY requirements.txt /tmp/
+RUN pip install --requirement /tmp/requirements.txt
+
+# NOTE: As uwsgi is part the configuration in some sense, how should we make 
+# this optional or at least clear to the reader?
+RUN pip install uwsgi
+
+# NOTE: j2cli is needed to preprocess config files based on values 
+# environment variables
+# https://github.com/kolypto/j2cli
+# https://tryolabs.com/blog/2015/03/26/configurable-docker-containers-for-multiple-environments/
+RUN pip install j2cli
+
+###
+# Setup configuration using environment variables
+ENV MYSQL_HOST ${MYSQL_HOST:-'mysql-db'}
+ENV MYSQL_USER ${MYSQL_USER:-'mydataaccount'}
+ENV MYSQL_PASSWORD ${MYSQL_PASSWORD:-'wr8gabrA'}
+ENV MYSQL_DB ${MYSQL_DB:-'MyDataAccount'}
+ENV MYSQL_PORT ${MYSQL_PORT:-3306}
+ENV URL_PREFIX ${URL_PREFIX:-''}
+
+### 
+# Create a installation directory into the container and copy the application 
+# to that folder.
+ARG APP_INSTALL_PATH=/mydata-sdk-account
+
+# TODO: This may not be needed. Test and refactor if necessary to keep it.
+ENV APP_INSTALL_PATH ${APP_INSTALL_PATH:-/mydata-account}
+RUN mkdir -p $APP_INSTALL_PATH
+
+# Change current directory inside the container / image to this path.
+WORKDIR $APP_INSTALL_PATH
+
+# Copy everything (including previously copied filed and folders) from directory
+# where Dockerfile is located to current WORKDIR inside container.
+# Remember that <src> must be inside the context of the build:
+# http://serverfault.com/a/666154
+COPY . .
+
+###
+# Configure and run the application using entrypoint.sh.
+# NOTE: Content of CMD are the default parameters passed to entrypoint.sh.
+# These can be overwritten on "docker run <image> <parameters_that_replace_CMD>"
+# https://docs.docker.com/engine/userguide/eng-image/dockerfile_best-practices/#/entrypoint
+COPY ./docker-entrypoint-account.sh /
+
+ENTRYPOINT ["/docker-entrypoint-account.sh"]
+
+# NOTE: Maybe this should be replaced with something that doesn't run anything 
+# and the command below should go to compose.yml ??
+CMD ["uwsgi --socket 0.0.0.0:8080 --protocol=http -w wsgi --callable app --processes 2"]
+

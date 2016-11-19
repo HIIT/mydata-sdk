@@ -191,7 +191,7 @@ def get_account_id_by_username_and_password(username=None, password=None):
     try:
         ###
         # User info by username
-        logger.debug('credentials')
+        logger.debug('User info by username from DB')
         sql_query = "SELECT " \
                     "MyDataAccount.LocalIdentities.Accounts_id, " \
                     "MyDataAccount.LocalIdentities.id, " \
@@ -230,17 +230,16 @@ def get_account_id_by_username_and_password(username=None, password=None):
 
     else:
         logger.debug('User found with given username: ' + username)
-        if app.config["SUPER_DEBUG"]:
-            logger.debug('account_id_from_db: ' + account_id_from_db)
-            logger.debug('identity_id_from_db: ' + identity_id_from_db)
-            logger.debug('username_from_db: ' + username_from_db)
-            logger.debug('password_from_db: ' + password_from_db)
-            logger.debug('salt_from_db: ' + salt_from_db)
+        logger.debug('account_id_from_db: ' + account_id_from_db)
+        logger.debug('identity_id_from_db: ' + identity_id_from_db)
+        logger.debug('username_from_db: ' + username_from_db)
+        logger.debug('password_from_db: ' + password_from_db)
+        logger.debug('salt_from_db: ' + salt_from_db)
 
+    logger.info("Checking password")
     if bcrypt.hashpw(password_to_check, salt_from_db) == password_from_db:
-        if app.config["SUPER_DEBUG"]:
-            logger.debug('Password hash from client: ' + bcrypt.hashpw(password_to_check, salt_from_db))
-            logger.debug('Password hash from db    : ' + password_from_db)
+        logger.debug('Password hash from client: ' + bcrypt.hashpw(password_to_check, salt_from_db))
+        logger.debug('Password hash from db    : ' + password_from_db)
 
         logger.debug('Authenticated')
         #cursor, user = get_account_by_id(cursor=cursor, account_id=int(account_id_from_db))
@@ -249,9 +248,8 @@ def get_account_id_by_username_and_password(username=None, password=None):
         return user
 
     else:
-        if app.config["SUPER_DEBUG"]:
-            logger.debug('Password hash from client: ' + bcrypt.hashpw(password_to_check, salt_from_db))
-            logger.debug('Password hash from db    : ' + password_from_db)
+        logger.debug('Password hash from client: ' + bcrypt.hashpw(password_to_check, salt_from_db))
+        logger.debug('Password hash from db    : ' + password_from_db)
 
         logger.debug('Not Authenticated')
         return None

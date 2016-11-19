@@ -27,15 +27,15 @@ paths:
         200:
           description: "Returns 200 OK"
         500:
-          description: "Internal server error"
+          description: "Internal server error. The actual status code and content of the error message may vary depending on error occurred."
           schema:
             $ref: "#/definitions/errors"
         400:
           description: "Bad Request"
           schema:
             $ref: "#/definitions/errors"
-        451:
-          description: "Unavailable For Legal Reasons"
+        403:
+          description: "Forbidden"
           schema:
             $ref: "#/definitions/errors"
 definitions:

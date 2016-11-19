@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 
 """
+Minimum viable Key management. NOT FOR PRODUCTION USE.
+
+
 __author__ = "Jani Yli-Kantola"
 __copyright__ = ""
 __credits__ = ["Harri Hirvonsalo", "Aleksi Palomäki"]

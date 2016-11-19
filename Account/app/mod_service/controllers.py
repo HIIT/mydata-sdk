@@ -48,7 +48,6 @@ def sign_slr(account_id=None, slr_payload=None, endpoint="sign_slr(account_id, s
         raise ApiError(code=500, title="Failed to get account owner's public key", detail=repr(exp), source=endpoint)
     else:
         logger.info("Account owner's public key and kid fetched")
-    finally:
         logger.debug("account_public_key: " + account_public_key_log_entry)
 
     # Fill Account key to cr_keys
@@ -62,37 +61,28 @@ def sign_slr(account_id=None, slr_payload=None, endpoint="sign_slr(account_id, s
     else:
         logger.info("Account owner's public key added to cr_keys")
 
-    # Fill timestamp to created in slr
-    try:
-        timestamp_to_fill = get_utc_time()
-    except Exception as exp:
-        logger.error("Could not get UTC time: " + repr(exp))
-        raise ApiError(code=500, title="Could not get UTC time", detail=repr(exp), source=endpoint)
-    else:
-        logger.info("timestamp_to_fill: " + timestamp_to_fill)
-
-    timestamp_to_fill = int(time())
-    try:
-        slr_payload['created'] = timestamp_to_fill
-    except Exception as exp:
-        logger.error("Could not fill timestamp to created in slr: " + repr(exp))
-        raise ApiError(code=500, title="Failed to fill timestamp to created in slr", detail=repr(exp), source=endpoint)
-    else:
-        logger.info("Timestamp filled to created in slr")
-
     # Sign slr
     slr_signed = {}
     try:
-        slr_signed = generate_and_sign_jws(account_id=account_id, jws_payload=json.dumps(slr_payload))
+        slr_signed_json = generate_and_sign_jws(account_id=account_id, jws_payload=json.dumps(slr_payload))
     except Exception as exp:
         logger.error('Could not create Service Link Record: ' + repr(exp))
         raise ApiError(code=500, title="Failed to create Service Link Record", detail=repr(exp), source=endpoint)
     else:
         logger.info('Service Link Record created and signed')
-        return slr_signed
-    finally:
         logger.debug("slr_payload: " + json.dumps(slr_payload))
-        logger.debug("slr_signed: " + slr_signed)
+        logger.debug("slr_signed_json: " + slr_signed_json)
+        try:
+            logger.info("Converting signed CSR from json to dict")
+            slr_signed_dict = json.loads(slr_signed_json)
+        except Exception as exp:
+            logger.error('Could not convert signed SLR from json to dict: ' + repr(exp))
+            raise ApiError(code=500, title="Failed to convert signed SLR from json to dict", detail=repr(exp), source=endpoint)
+        else:
+            logger.info('Converted signed SLR from json to dict')
+            logger.debug('slr_signed_dict: ' + json.dumps(slr_signed_dict))
+
+        return slr_signed_dict
 
 
 def sign_ssr(account_id=None, ssr_payload=None, endpoint="sign_ssr(account_id, slr_payload, endpoint)"):
@@ -103,36 +93,28 @@ def sign_ssr(account_id=None, ssr_payload=None, endpoint="sign_ssr(account_id, s
 
     logger.info("Signing Service Link Status Record")
 
-    # Fill timestamp to created in slr
-    try:
-        timestamp_to_fill = get_utc_time()
-    except Exception as exp:
-        logger.error("Could not get UTC time: " + repr(exp))
-        raise ApiError(code=500, title="Could not get UTC time", detail=repr(exp), source=endpoint)
-    else:
-        logger.info("timestamp_to_fill: " + timestamp_to_fill)
-
-    try:
-        ssr_payload['iat'] = timestamp_to_fill
-    except Exception as exp:
-        logger.error("Could not fill timestamp to iat in ssr_payload: " + repr(exp))
-        raise ApiError(code=500, title="Failed to fill timestamp to iat in ssr_payload", detail=repr(exp), source=endpoint)
-    else:
-        logger.info("Timestamp filled to created in ssr_payload")
-
     # Sign ssr
     ssr_signed = {}
     try:
-        ssr_signed = generate_and_sign_jws(account_id=account_id, jws_payload=json.dumps(ssr_payload))
+        ssr_signed_json = generate_and_sign_jws(account_id=account_id, jws_payload=json.dumps(ssr_payload))
     except Exception as exp:
         logger.error('Could not create Service Link Status Record: ' + repr(exp))
         raise ApiError(code=500, title="Failed to create Service Link Record", detail=repr(exp), source=endpoint)
     else:
         logger.info('Service Link Status Record created and signed')
-        return ssr_signed, timestamp_to_fill
-    finally:
         logger.debug("ssr_payload: " + json.dumps(ssr_payload))
-        logger.debug("ssr_signed: " + ssr_signed)
+        logger.debug("ssr_signed_json: " + ssr_signed_json)
+        try:
+            logger.info("Converting signed CSR from json to dict")
+            ssr_signed_dict = json.loads(ssr_signed_json)
+        except Exception as exp:
+            logger.error('Could not convert signed SLR from json to dict: ' + repr(exp))
+            raise ApiError(code=500, title="Failed to convert signed SLR from json to dict", detail=repr(exp), source=endpoint)
+        else:
+            logger.info('Converted signed SLR from json to dict')
+            logger.debug('ssr_signed_dict: ' + json.dumps(ssr_signed_dict))
+
+        return ssr_signed_dict
 
 
 def store_slr_and_ssr(slr_entry=None, ssr_entry=None, endpoint="sign_ssr(account_id, slr_payload, endpoint)"):
@@ -157,20 +139,19 @@ def store_slr_and_ssr(slr_entry=None, ssr_entry=None, endpoint="sign_ssr(account
 
         cursor = ssr_entry.to_db(cursor=cursor)
 
-        data = {'slr_id': slr_id, 'ssr_id': ssr_entry.id}
+        #data = {'slr_id': slr_id, 'ssr_id': ssr_entry.id}
 
         db.connection.commit()
     except Exception as exp:
-        logger.debug('commit failed: ' + repr(exp))
+        logger.debug('Slr and Ssr commit failed: ' + repr(exp))
         db.connection.rollback()
         logger.debug('--> rollback')
         raise ApiError(code=500, title="Failed to store slr and ssr", detail=repr(exp), source=endpoint)
     else:
         logger.debug('Slr and Ssr commited')
-        return data
-    finally:
         logger.debug("slr_entry: " + slr_entry.log_entry)
         logger.debug("ssr_entry: " + ssr_entry.log_entry)
+        return slr_entry, ssr_entry
 
 
 def get_surrogate_id_by_account_and_service(account_id=None, service_id=None, endpoint="(get_surrogate_id_by_account_and_Service)"):
@@ -187,7 +168,6 @@ def get_surrogate_id_by_account_and_service(account_id=None, service_id=None, en
         raise
     else:
         logger.info("SurrogateId object created")
-    finally:
         logger.debug("sur_id_obj: " + sur_id_obj.log_entry)
 
     # Get DB cursor
@@ -204,8 +184,6 @@ def get_surrogate_id_by_account_and_service(account_id=None, service_id=None, en
         raise
     else:
         logger.debug("Got sur_id_obj:" + json.dumps(sur_id_obj.to_dict))
-        return sur_id_obj.to_dict
-    finally:
         logger.debug("sur_id_obj: " + sur_id_obj.log_entry)
-
+        return sur_id_obj.to_dict
 

@@ -1,0 +1,239 @@
+version: '2'
+
+services:
+
+  mysql-db:
+    image: mysql:5.6
+    container_name: mysql-db
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - "./init-db:/docker-entrypoint-initdb.d:ro"
+    environment:
+      - MYSQL_ROOT_PASSWORD=Y3xUcheg
+      - MYSQL_USER=mydataaccount
+      - MYSQL_PASSWORD=wr8gabrA
+    networks:
+      - mydata_sdk_demo_network
+
+  account:
+    build:
+      context: ./Account/
+      dockerfile: Dockerfile-account
+      args:
+        - APP_INSTALL_PATH=/mydata-sdk-account
+    container_name: account
+    depends_on:
+      - mysql-db
+    command: uwsgi --socket 0.0.0.0:8080 --protocol=http -w wsgi --callable app --processes 2
+    environment:
+      - PYTHONUNBUFFERED='true'
+      - MYSQL_HOST='mysql-db'
+      - MYSQL_USER='mydataaccount'
+      - MYSQL_PASSWORD='wr8gabrA'
+      - MYSQL_DB='MyDataAccount'
+      - MYSQL_PORT=3306
+      - URL_PREFIX=''
+#      - SERVER_NAME=''
+#      - VIRTUAL_HOST=localhost
+    ports:
+      - '8080:8080'
+    networks:
+      - mydata_sdk_demo_network
+
+  operator_components:
+    build:
+      context: .
+#      context: context: ./Operator_Components/
+      dockerfile: Dockerfile-overholt
+      args:
+        - APP_INSTALL_PATH=/mydata-sdk-components
+        - OVERHOLT_APPLICATION_PATH=/Operator_Components
+    container_name: operator_components
+    depends_on:
+      - redis
+    environment:
+      - PYTHONUNBUFFERED='true'
+      - ACCOUNT_MANAGEMENT_URL='http://account:8080/'
+      - ACCOUNT_MANAGEMENT_USER="test_sdk"
+      - ACCOUNT_MANAGEMENT_PASSWORD="test_sdk_pw"
+      - DATABASE_PATH="./db_Operator.sqlite"
+      - MYSQL_HOST='mysql-db'
+      - MYSQL_USER='operator'
+      - MYSQL_PASSWORD='MynorcA'
+      - MYSQL_DB='db_Operator'
+      - MYSQL_PORT=3306
+      # Naming this CELERY_BROKER_URL messes things up pretty bad.
+      # Issue is discussed here
+      # https://github.com/celery/celery/issues/2765#issuecomment-228224236
+      - SELERY_BROKER_URL='redis://redis:6379/0'
+      - SELERY_RESULT_BACKEND='redis://redis:6379/0'
+      - CERT_PATH="./service_key.jwk"
+      - CERT_KEY_PATH="./service_key.jwk"
+      - CERT_PASSWORD_PATH="./cert_pw"
+      - OPERATOR_UID="41e19fcd-1951-455f-9169-a303f990f52d"
+      - OPERATOR_ROOT_PATH="/api/1.2"
+      - OPERATOR_CR_PATH="/cr"
+      - OPERATOR_SLR_PATH="/slr"
+      - SERVICE_URL="http://service_components:7000"
+      - VIRTUAL_HOST=localhost.operator
+    ports:
+      - '5000:5000'
+    networks:
+      - mydata_sdk_demo_network
+
+  service_components:
+    build:
+      context: .
+#      context: ./Service_Components/
+      dockerfile: Dockerfile-overholt
+      args:
+        - APP_INSTALL_PATH=/mydata-sdk-components
+        - OVERHOLT_APPLICATION_PATH=/Service_Components
+    container_name: service_components
+    depends_on:
+      - redis
+    environment:
+      - PYTHONUNBUFFERED='true'
+      - DATABASE_PATH="./db_Srv.sqlite"
+      - MYSQL_HOST='mysql-db'
+      - MYSQL_USER='service'
+      - MYSQL_PASSWORD='MynorcA'
+      - MYSQL_DB='db_Srv'
+      - MYSQL_PORT=3306
+      # Naming this CELERY_BROKER_URL messes things up pretty bad.
+      # Issue is discussed here
+      # https://github.com/celery/celery/issues/2765#issuecomment-228224236
+      - SELERY_BROKER_URL='redis://redis:6379/0'
+      - SELERY_RESULT_BACKEND='redis://redis:6379/0'
+      - CERT_PATH="./service_key.jwk"
+      - CERT_KEY_PATH="./service_key.jwk"
+      - CERT_PASSWORD_PATH="./cert_pw"
+      - SERVICE_URL="http://service_mockup:2000"
+      - OPERATOR_URL="http://operator_components:5000"
+      - SERVICE_ROOT_PATH="/api/1.2"
+      - SERVICE_CR_PATH="/cr"
+      - SERVICE_SLR_PATH="/slr"
+      - VIRTUAL_HOST=localhost.service
+    networks:
+      - mydata_sdk_demo_network
+
+  service_mockup:
+    build:
+      context: .
+#      context: ./Service_Mockup/
+      dockerfile: Dockerfile-overholt
+      args:
+        - APP_INSTALL_PATH=/mydata-sdk-components
+        - OVERHOLT_APPLICATION_PATH=/Service_Mockup
+    container_name: service_mockup
+    depends_on:
+      - redis
+    environment:
+      - PYTHONUNBUFFERED='true'
+      - SERVICE_MGMNT_URL="http://service_components:7000"
+      - VIRTUAL_HOST=localhost.srvmockup
+      - MYSQL_HOST='mysql-db'
+      - MYSQL_USER='serviceMockup'
+      - MYSQL_PASSWORD='MynorcA'
+      - MYSQL_DB='db_Service_Mockup'
+      - MYSQL_PORT=3306
+    networks:
+      - mydata_sdk_demo_network
+
+  celery_worker_operator:
+    build:
+      context: .
+#      context: context: ./Operator_Components/
+      dockerfile: Dockerfile-overholt
+      args:
+        - APP_INSTALL_PATH=/mydata-sdk-components
+        - OVERHOLT_APPLICATION_PATH=/Operator_Components
+    container_name: celery_worker_operator
+    depends_on:
+      - redis
+    # We can move docker-entrypoint.sh back to Dockerfile once we move to uwsgi (get rid of dumb-init)
+#    command: ["sh", "-c", "cd /mydata-sdk-components/Operator_Components && celery -A tasks worker"]
+    command: ["/docker-entrypoint-overholt.sh", "sh", "-c", "cd /mydata-sdk-components/Operator_Components && celery -A op_tasks worker -Q op_queue"]
+    environment:
+      - PYTHONUNBUFFERED='true'
+      - ACCOUNT_MANAGEMENT_URL='http://account:8080/'
+      - ACCOUNT_MANAGEMENT_USER="test_sdk"
+      - ACCOUNT_MANAGEMENT_PASSWORD="test_sdk_pw"
+      - DATABASE_PATH="./db_Operator.sqlite"
+      # Naming this CELERY_BROKER_URL messes things up pretty bad.
+      # Issue is discussed here
+      # https://github.com/celery/celery/issues/2765#issuecomment-228224236
+      - SELERY_BROKER_URL='redis://redis:6379/0'
+      - SELERY_RESULT_BACKEND='redis://redis:6379/0'
+      # Needed in order to run Celery as root.
+      - C_FORCE_ROOT="true"
+      - CERT_PATH="./service_key.jwk"
+      - CERT_KEY_PATH="./service_key.jwk"
+      - CERT_PASSWORD_PATH="./cert_pw"
+      - OPERATOR_UID="41e19fcd-1951-455f-9169-a303f990f52d"
+      - OPERATOR_ROOT_PATH="/api/1.2"
+      - OPERATOR_CR_PATH="/cr"
+      - OPERATOR_SLR_PATH="/slr"
+      - SERVICE_URL="http://service_components:7000"
+      - VIRTUAL_HOST=localhost.celeryworker.operator
+    networks:
+      - mydata_sdk_demo_network
+
+  celery_worker_service:
+    build:
+      context: .
+#      context: context: ./Service_Components/
+      dockerfile: Dockerfile-overholt
+      args:
+        - APP_INSTALL_PATH=/mydata-sdk-components
+        - OVERHOLT_APPLICATION_PATH=/Service_Components
+    container_name: celery_worker_service
+    depends_on:
+      - redis
+    # We can move docker-entrypoint.sh back to Dockerfile once we move to uwsgi (get rid of dumb-init)
+#    command: ["sh", "-c", "cd /mydata-sdk-components/Operator_Components && celery -A tasks worker"]
+    command: ["/docker-entrypoint-overholt.sh", "sh", "-c", "cd /mydata-sdk-components/Service_Components && celery -A srv_tasks worker -Q srv_queue"]
+    environment:
+      - PYTHONUNBUFFERED='true'
+      - ACCOUNT_MANAGEMENT_URL='http://account:8080/'
+      - ACCOUNT_MANAGEMENT_USER="test_sdk"
+      - ACCOUNT_MANAGEMENT_PASSWORD="test_sdk_pw"
+      - DATABASE_PATH="./db_Srv.sqlite"
+      # Naming this CELERY_BROKER_URL messes things up pretty bad.
+      # Issue is discussed here
+      # https://github.com/celery/celery/issues/2765#issuecomment-228224236
+      - SELERY_BROKER_URL='redis://redis:6379/0'
+      - SELERY_RESULT_BACKEND='redis://redis:6379/0'
+      # Needed in order to run Celery as root.
+      - C_FORCE_ROOT="true"
+      - MYSQL_HOST='mysql-db'
+      - MYSQL_USER='service'
+      - MYSQL_PASSWORD='MynorcA'
+      - MYSQL_DB='db_Srv'
+      - MYSQL_PORT=3306
+      - CERT_PATH="./service_key.jwk"
+      - CERT_KEY_PATH="./service_key.jwk"
+      - CERT_PASSWORD_PATH="./cert_pw"
+      - OPERATOR_UID="41e19fcd-1951-455f-9169-a303f990f52d"
+      - OPERATOR_ROOT_PATH="/api/1.2"
+      - OPERATOR_CR_PATH="/cr"
+      - OPERATOR_SLR_PATH="/slr"
+      - SERVICE_URL="http://service_components:7000"
+      - VIRTUAL_HOST=localhost.celeryworker.service
+    networks:
+      - mydata_sdk_demo_network
+
+  redis:
+    image: redis:3.2-alpine
+    container_name: redis
+    volumes:
+      - redis-data:/data
+    networks:
+      - mydata_sdk_demo_network
+
+volumes:
+  mysql-data:
+  redis-data:
+
+networks:
+  mydata_sdk_demo_network:

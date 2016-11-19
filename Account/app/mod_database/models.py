@@ -6,13 +6,14 @@ import logging
 import bcrypt  # https://github.com/pyca/bcrypt/, https://pypi.python.org/pypi/bcrypt/2.0.0
 
 # Import the database object from the main app module
+import datetime
 from flask import json
 
 from app import db, api, login_manager, app
 
 # create logger with 'spam_application'
 from app.helpers import get_custom_logger
-from app.mod_database.helpers import execute_sql_insert, execute_sql_insert_2, execute_sql_select_2
+from app.mod_database.helpers import execute_sql_insert, execute_sql_insert_2, execute_sql_select_2, execute_sql_update
 
 logger = get_custom_logger(__name__)
 
@@ -24,14 +25,24 @@ class Account():
     id = None
     global_identifier = None
     activated = None
+    table_name = ""
+    deleted = ""
 
-    def __init__(self, id="", global_identifyer="", activated=""):
+    def __init__(self, id="", global_identifyer="", activated="", deleted=0, table_name="MyDataAccount.Accounts"):
         if id is not None:
             self.id = id
         if global_identifyer is not None:
             self.global_identifier = global_identifyer
         if activated is not None:
             self.activated = activated
+        if table_name is not None:
+            self.table_name = table_name
+        if deleted is not None:
+            self.deleted = deleted
+
+    @property
+    def table_name(self):
+        return self.table_name
 
     @property
     def id(self):
@@ -63,8 +74,10 @@ class Account():
 
     @property
     def to_dict_external(self):
-        dictionary = self.__dict__
+        dictionary = self.to_dict
         del dictionary['id']
+        del dictionary['deleted']
+        del dictionary['table_name']
         return dictionary
 
     @property
@@ -77,10 +90,14 @@ class Account():
 
     def to_db(self, cursor=""):
 
-        sql_query = "INSERT INTO Accounts (globalIdenttifyer) VALUES ('%s')" % (self.global_identifier)
+        sql_query = "INSERT INTO " + self.table_name + " (globalIdentifier) VALUES (%s)"
+
+        arguments = (
+            str(self.global_identifier),
+        )
 
         try:
-            cursor, last_id = execute_sql_insert(cursor=cursor, sql_query=sql_query)
+            cursor, last_id = execute_sql_insert_2(cursor=cursor, sql_query=sql_query, arguments=arguments)
         except Exception as exp:
             logger.debug('sql_query: ' + repr(exp))
             raise
@@ -92,11 +109,9 @@ class Account():
         if cursor is None:
             raise AttributeError("Provide cursor as parameter")
 
-        # TODO: Don't allow if role is only criteria
-
-        sql_query = "SELECT id, globalIdenttifyer, activated " \
-                    "FROM MyDataAccount.Accounts " \
-                    "WHERE id LIKE %s AND globalIdenttifyer LIKE %s AND activated LIKE %s;"
+        sql_query = "SELECT id, globalIdentifier, activated " \
+                    "FROM " + self.table_name + " " \
+                    "WHERE id LIKE %s AND globalIdentifier LIKE %s AND activated LIKE %s;"
 
         arguments = (
             '%' + str(self.id) + '%',
@@ -133,8 +148,10 @@ class LocalIdentity():
     username = None
     pwd_id = None
     accounts_id = None
+    table_name = ""
+    deleted = ""
 
-    def __init__(self, id="", username="", pwd_id="", accounts_id=""):
+    def __init__(self, id="", username="", pwd_id="", accounts_id="", deleted=0, table_name="MyDataAccount.LocalIdentities"):
         if id is not None:
             self.id = id
         if username is not None:
@@ -143,6 +160,14 @@ class LocalIdentity():
             self.pwd_id = pwd_id
         if accounts_id is not None:
             self.accounts_id = accounts_id
+        if table_name is not None:
+            self.table_name = table_name
+        if deleted is not None:
+            self.deleted = deleted
+
+    @property
+    def table_name(self):
+        return self.table_name
 
     @property
     def id(self):
@@ -182,9 +207,11 @@ class LocalIdentity():
 
     @property
     def to_dict_external(self):
-        dictionary = self.__dict__
+        dictionary = self.to_dict
         del dictionary['id']
         del dictionary['accounts_id']
+        del dictionary['table_name']
+        del dictionary['deleted']
         return dictionary
 
     @property
@@ -197,12 +224,17 @@ class LocalIdentity():
 
     def to_db(self, cursor=""):
 
-        sql_query = "INSERT INTO LocalIdentities (username, Accounts_id, LocalIdentityPWDs_id) " \
-                    "VALUES ('%s', '%s', '%s')" % \
-                    (self.username, self.accounts_id, self.pwd_id)
+        sql_query = "INSERT INTO " + self.table_name + " (username, Accounts_id, LocalIdentityPWDs_id) " \
+                    "VALUES (%s, %s, %s)"
+
+        arguments = (
+            str(self.username),
+            int(self.accounts_id),
+            str(self.pwd_id),
+        )
 
         try:
-            cursor, last_id = execute_sql_insert(cursor=cursor, sql_query=sql_query)
+            cursor, last_id = execute_sql_insert_2(cursor=cursor, sql_query=sql_query, arguments=arguments)
         except Exception as exp:
             logger.debug('sql_query: ' + repr(exp))
             raise
@@ -217,7 +249,7 @@ class LocalIdentity():
         # TODO: Don't allow if role is only criteria
 
         sql_query = "SELECT id, username, LocalIdentityPWDs_id, Accounts_id " \
-                    "FROM MyDataAccount.LocalIdentities " \
+                    "FROM " + self.table_name + " " \
                     "WHERE id LIKE %s AND username LIKE %s AND LocalIdentityPWDs_id LIKE %s AND Accounts_id LIKE %s;"
 
         arguments = (
@@ -254,12 +286,22 @@ class LocalIdentity():
 class LocalIdentityPWD():
     id = None
     password = None
+    table_name = ""
+    deleted = ""
 
-    def __init__(self, id="", password=""):
+    def __init__(self, id="", password="", deleted=0, table_name="MyDataAccount.LocalIdentityPWDs"):
         if id is not None:
             self.id = id
         if password is not None:
             self.password = password
+        if table_name is not None:
+            self.table_name = table_name
+        if deleted is not None:
+            self.deleted = deleted
+
+    @property
+    def table_name(self):
+        return self.table_name
 
     @property
     def id(self):
@@ -283,8 +325,10 @@ class LocalIdentityPWD():
 
     @property
     def to_dict_external(self):
-        dictionary = self.__dict__
+        dictionary = self.to_dict
         del dictionary['id']
+        del dictionary['table_name']
+        del dictionary['deleted']
         return dictionary
 
     @property
@@ -297,10 +341,14 @@ class LocalIdentityPWD():
 
     def to_db(self, cursor=""):
 
-        sql_query = "INSERT INTO LocalIdentityPWDs (password) VALUES ('%s')" % (self.password)
+        sql_query = "INSERT INTO " + self.table_name + " (password) VALUES (%s)"
+
+        arguments = (
+            str(self.password),
+        )
 
         try:
-            cursor, last_id = execute_sql_insert(cursor=cursor, sql_query=sql_query)
+            cursor, last_id = execute_sql_insert_2(cursor=cursor, sql_query=sql_query, arguments=arguments)
         except Exception as exp:
             logger.debug('sql_query: ' + repr(exp))
             raise
@@ -315,7 +363,7 @@ class LocalIdentityPWD():
         # TODO: Don't allow if role is only criteria
 
         sql_query = "SELECT id, password " \
-                    "FROM MyDataAccount.LocalIdentityPWDs " \
+                    "FROM " + self.table_name + " " \
                     "WHERE id LIKE %s AND password LIKE %s;"
 
         arguments = (
@@ -350,8 +398,10 @@ class OneTimeCookie():
     created = None
     updated = None
     identity_id = None
+    table_name = ""
+    deleted = ""
 
-    def __init__(self, id="", cookie="", used="", created="", updated="", identity_id=""):
+    def __init__(self, id="", cookie="", used="", created="", updated="", identity_id="", deleted=0, table_name="MyDataAccount.OneTimeCookies"):
         if id is not None:
             self.id = id
         if cookie is not None:
@@ -364,6 +414,14 @@ class OneTimeCookie():
             self.updated = updated
         if identity_id is not None:
             self.identity_id = identity_id
+        if table_name is not None:
+            self.table_name = table_name
+        if deleted is not None:
+            self.deleted = deleted
+
+    @property
+    def table_name(self):
+        return self.table_name
 
     @property
     def id(self):
@@ -419,8 +477,10 @@ class OneTimeCookie():
 
     @property
     def to_dict_external(self):
-        dictionary = self.__dict__
+        dictionary = self.to_dict
         del dictionary['id']
+        del dictionary['table_name']
+        del dictionary['deleted']
         return dictionary
 
     @property
@@ -433,12 +493,16 @@ class OneTimeCookie():
 
     def to_db(self, cursor=""):
 
-        sql_query = "INSERT INTO OneTimeCookie (oneTimeCookie, LocalIdentities_id) " \
-                    "VALUES ('%s', '%s')" % \
-                    (self.cookie, self.identity_id)
+        sql_query = "INSERT INTO " + self.table_name + " (oneTimeCookie, LocalIdentities_id) " \
+                    "VALUES (%s, %s)"
+
+        arguments = (
+            str(self.cookie),
+            int(self.identity_id),
+        )
 
         try:
-            cursor, last_id = execute_sql_insert(cursor=cursor, sql_query=sql_query)
+            cursor, last_id = execute_sql_insert_2(cursor=cursor, sql_query=sql_query, arguments=arguments)
         except Exception as exp:
             logger.debug('sql_query: ' + repr(exp))
             raise
@@ -450,10 +514,8 @@ class OneTimeCookie():
         if cursor is None:
             raise AttributeError("Provide cursor as parameter")
 
-        # TODO: Don't allow if role is only criteria
-
         sql_query = "SELECT id, oneTimeCookie, used, created, updated, LocalIdentities_id " \
-                    "FROM MyDataAccount.OneTimeCookies " \
+                    "FROM " + self.table_name + " " \
                     "WHERE id LIKE %s AND oneTimeCookie LIKE %s AND used LIKE %s AND created LIKE %s " \
                     "AND updated LIKE %s AND LocalIdentities_id LIKE %s;"
 
@@ -498,14 +560,24 @@ class Salt():
     id = None
     salt = None
     identity_id = None
+    table_name = ""
+    deleted = ""
 
-    def __init__(self, id="", salt="", identity_id=""):
+    def __init__(self, id="", salt="", identity_id="", deleted=0, table_name="MyDataAccount.Salts"):
         if id is not None:
             self.id = id
         if salt is not None:
             self.salt = salt
         if identity_id is not None:
             self.identity_id = identity_id
+        if table_name is not None:
+            self.table_name = table_name
+        if deleted is not None:
+            self.deleted = deleted
+
+    @property
+    def table_name(self):
+        return self.table_name
 
     @property
     def id(self):
@@ -537,8 +609,10 @@ class Salt():
 
     @property
     def to_dict_external(self):
-        dictionary = self.__dict__
+        dictionary = self.to_dict
         del dictionary['id']
+        del dictionary['table_name']
+        del dictionary['deleted']
         return dictionary
 
     @property
@@ -551,11 +625,15 @@ class Salt():
 
     def to_db(self, cursor=""):
 
-        sql_query = "INSERT INTO Salts (salt, LocalIdentities_id) VALUES ('%s', '%s')" % \
-                    (self.salt, self.identity_id)
+        sql_query = "INSERT INTO " + self.table_name + " (salt, LocalIdentities_id) VALUES (%s, %s)"
+
+        arguments = (
+            str(self.salt),
+            int(self.identity_id),
+        )
 
         try:
-            cursor, last_id = execute_sql_insert(cursor=cursor, sql_query=sql_query)
+            cursor, last_id = execute_sql_insert_2(cursor=cursor, sql_query=sql_query, arguments=arguments)
         except Exception as exp:
             logger.debug('sql_query: ' + repr(exp))
             raise
@@ -570,7 +648,7 @@ class Salt():
         # TODO: Don't allow if role is only criteria
 
         sql_query = "SELECT id, salt, LocalIdentities_id " \
-                    "FROM MyDataAccount.Salts " \
+                    "FROM " + self.table_name + " " \
                     "WHERE id LIKE %s AND salt LIKE %s AND LocalIdentities_id LIKE %s;"
 
         arguments = (
@@ -610,8 +688,10 @@ class Particulars():
     date_of_birth = None
     img_url = None
     account_id = None
+    table_name = ""
+    deleted = ""
 
-    def __init__(self, id="", firstname="", lastname="", date_of_birth="", img_url=app.config['AVATAR_URL'], account_id=""):
+    def __init__(self, id="", firstname="", lastname="", date_of_birth="", img_url=app.config['AVATAR_URL'], account_id="", deleted=0, table_name="MyDataAccount.Particulars"):
         if id is not None:
             self.id = id
         if firstname is not None:
@@ -624,6 +704,14 @@ class Particulars():
             self.img_url = str(img_url)
         if account_id is not None:
             self.account_id = account_id
+        if table_name is not None:
+            self.table_name = table_name
+        if deleted is not None:
+            self.deleted = deleted
+
+    @property
+    def table_name(self):
+        return self.table_name
 
     @property
     def id(self):
@@ -679,13 +767,25 @@ class Particulars():
 
     @property
     def to_dict(self):
+        if isinstance(self.date_of_birth, datetime.date):
+            self.date_of_birth = self.date_of_birth.strftime("%Y-%m-%d")
         return self.__dict__
 
     @property
     def to_dict_external(self):
-        dictionary = self.__dict__
+        dictionary = self.to_dict
         del dictionary['id']
         del dictionary['account_id']
+        del dictionary['table_name']
+        del dictionary['deleted']
+        return dictionary
+
+    @property
+    def to_api_dict(self):
+        dictionary = {}
+        dictionary['type'] = "Particular"
+        dictionary['id'] = str(self.id)
+        dictionary['attributes'] = self.to_dict_external
         return dictionary
 
     @property
@@ -702,11 +802,19 @@ class Particulars():
 
     def to_db(self, cursor=""):
 
-        sql_query = "INSERT INTO Particulars (firstname, lastname, dateOfBirth, img_url, Accounts_id) " \
-                    "VALUES ('%s', '%s', STR_TO_DATE('%s', '%%d-%%m-%%Y'), '%s', '%s')" % \
-                    (self.firstname, self.lastname, self.date_of_birth, self.img_url, self.account_id)
+        sql_query = "INSERT INTO " + self.table_name + " (firstname, lastname, dateOfBirth, img_url, Accounts_id) " \
+                    "VALUES (%s, %s, STR_TO_DATE(%s, '%%Y-%%m-%%d'), %s, %s)"
+
+        arguments = (
+            str(self.firstname),
+            str(self.lastname),
+            str(self.date_of_birth),
+            str(self.img_url),
+            int(self.account_id),
+        )
+
         try:
-            cursor, last_id = execute_sql_insert(cursor=cursor, sql_query=sql_query)
+            cursor, last_id = execute_sql_insert_2(cursor=cursor, sql_query=sql_query, arguments=arguments)
         except Exception as exp:
             logger.debug('sql_query: ' + repr(exp))
             raise
@@ -714,23 +822,55 @@ class Particulars():
             self.id = last_id
             return cursor
 
+    def update_db(self, cursor=""):
+
+        sql_query = "UPDATE " + self.table_name + " SET firstname=%s, lastname=%s, dateOfBirth=STR_TO_DATE(%s, '%%Y-%%m-%%d'), img_url=%s " \
+                    "WHERE id=%s AND Accounts_id=%s"
+
+        arguments = (
+            str(self.firstname),
+            str(self.lastname),
+            str(self.date_of_birth),
+            str(self.img_url),
+            str(self.id),
+            str(self.account_id),
+        )
+
+        try:
+            cursor = execute_sql_update(cursor=cursor, sql_query=sql_query, arguments=arguments)
+        except Exception as exp:
+            logger.debug('sql_query: ' + repr(exp))
+            raise
+        else:
+            logger.info("SQL query executed")
+            return cursor
+
     def from_db(self, cursor=None):
         if cursor is None:
             raise AttributeError("Provide cursor as parameter")
 
-        # TODO: Don't allow if role is only criteria
+        # Querying with all data disabled due formatting problems
+        # TODO: Enable Querying with Date
+        # sql_query = "SELECT id, firstname, lastname, dateOfBirth, img_url, Accounts_id " \
+        #             "FROM " + self.table_name + " " \
+        #             "WHERE id LIKE %s AND firstname LIKE %s AND lastname LIKE %s AND dateOfBirth LIKE %s " \
+        #             "AND img_url LIKE %s AND Accounts_id LIKE %s;"
+        #
+        # arguments = (
+        #     '%' + str(self.id) + '%',
+        #     '%' + str(self.firstname) + '%',
+        #     '%' + str(self.lastname) + '%',
+        #     '%' + str(self.date_of_birth) + '%',
+        #     '%' + str(self.img_url) + '%',
+        #     '%' + str(self.account_id) + '%',
+        # )
 
         sql_query = "SELECT id, firstname, lastname, dateOfBirth, img_url, Accounts_id " \
-                    "FROM MyDataAccount.Particulars " \
-                    "WHERE id LIKE %s AND firstname LIKE %s AND lastname LIKE %s AND dateOfBirth LIKE %s " \
-                    "AND img_url LIKE %s AND Accounts_id LIKE %s;"
+                    "FROM " + self.table_name + " " \
+                    "WHERE id LIKE %s AND Accounts_id LIKE %s;"
 
         arguments = (
             '%' + str(self.id) + '%',
-            '%' + str(self.firstname) + '%',
-            '%' + str(self.lastname) + '%',
-            '%' + str(self.date_of_birth) + '%',
-            '%' + str(self.img_url) + '%',
             '%' + str(self.account_id) + '%',
         )
 
@@ -768,8 +908,10 @@ class Email():
     type = None
     prime = None
     account_id = None
+    table_name = ""
+    deleted = ""
 
-    def __init__(self, id="", email="", type="Personal", prime="", account_id=""):
+    def __init__(self, id="", email="", type="Personal", prime="", account_id="", deleted=0, table_name="MyDataAccount.Emails"):
         if id is not None:
             self.id = id
         if email is not None:
@@ -777,9 +919,20 @@ class Email():
         if type is not None:
             self.type = type
         if prime is not None:
-            self.prime = prime
+            if prime == "True":
+                self.prime = 1
+            else:
+                self.prime = 0
         if account_id is not None:
             self.account_id = account_id
+        if table_name is not None:
+            self.table_name = table_name
+        if deleted is not None:
+            self.deleted = deleted
+
+    @property
+    def table_name(self):
+        return self.table_name
 
     @property
     def id(self):
@@ -827,9 +980,23 @@ class Email():
 
     @property
     def to_dict_external(self):
-        dictionary = self.__dict__
+        dictionary = self.to_dict
         del dictionary['id']
         del dictionary['account_id']
+        del dictionary['table_name']
+        del dictionary['deleted']
+        if dictionary['prime'] == 1:
+            dictionary['prime'] = "True"
+        elif dictionary['prime'] == 0:
+            dictionary['prime'] = "False"
+        return dictionary
+
+    @property
+    def to_api_dict(self):
+        dictionary = {}
+        dictionary['type'] = "Email"
+        dictionary['id'] = str(self.id)
+        dictionary['attributes'] = self.to_dict_external
         return dictionary
 
     @property
@@ -842,12 +1009,18 @@ class Email():
 
     def to_db(self, cursor=""):
 
-        sql_query = "INSERT INTO Emails (email, typeEnum, prime, Accounts_id) " \
-                    "VALUES ('%s', '%s', '%s', '%s')" % \
-                    (self.email, self.type, self.prime, self.account_id)
+        sql_query = "INSERT INTO " + self.table_name + " (email, entryType, prime, Accounts_id) " \
+                    "VALUES (%s, %s, %s, %s)"
+
+        arguments = (
+            str(self.email),
+            str(self.type),
+            str(self.prime),
+            int(self.account_id),
+        )
 
         try:
-            cursor, last_id = execute_sql_insert(cursor=cursor, sql_query=sql_query)
+            cursor, last_id = execute_sql_insert_2(cursor=cursor, sql_query=sql_query, arguments=arguments)
         except Exception as exp:
             logger.debug('sql_query: ' + repr(exp))
             raise
@@ -859,17 +1032,12 @@ class Email():
         if cursor is None:
             raise AttributeError("Provide cursor as parameter")
 
-        # TODO: Don't allow if role is only criteria
-
-        sql_query = "SELECT id, email, typeEnum, prime, Accounts_id " \
-                    "FROM MyDataAccount.Particulars " \
-                    "WHERE id LIKE %s AND email LIKE %s AND typeEnum LIKE %s AND prime LIKE %s AND Accounts_id LIKE %s;"
+        sql_query = "SELECT id, email, entryType, prime, Accounts_id " \
+                    "FROM " + self.table_name + " " \
+                    "WHERE id LIKE %s AND Accounts_id LIKE %s;"
 
         arguments = (
             '%' + str(self.id) + '%',
-            '%' + str(self.email) + '%',
-            '%' + str(self.type) + '%',
-            '%' + str(self.prime) + '%',
             '%' + str(self.account_id) + '%',
         )
 
@@ -897,6 +1065,28 @@ class Email():
 
             return cursor
 
+    def update_db(self, cursor=""):
+
+        sql_query = "UPDATE " + self.table_name + " SET email=%s, entryType=%s, prime=%s " \
+                                                  "WHERE id=%s AND Accounts_id=%s"
+
+        arguments = (
+            str(self.email),
+            str(self.type),
+            str(self.prime),
+            str(self.id),
+            str(self.account_id),
+        )
+
+        try:
+            cursor = execute_sql_update(cursor=cursor, sql_query=sql_query, arguments=arguments)
+        except Exception as exp:
+            logger.debug('sql_query: ' + repr(exp))
+            raise
+        else:
+            logger.info("SQL query executed")
+            return cursor
+
 
 #####################
 class Telephone():
@@ -905,8 +1095,10 @@ class Telephone():
     type = None
     prime = None
     account_id = None
+    table_name = ""
+    deleted = ""
 
-    def __init__(self, id="", tel="", type="Personal", prime="", account_id=""):
+    def __init__(self, id="", tel="", type="Personal", prime="", account_id="", deleted=0, table_name="MyDataAccount.Telephones"):
         if id is not None:
             self.id = id
         if tel is not None:
@@ -914,9 +1106,20 @@ class Telephone():
         if type is not None:
             self.type = type
         if prime is not None:
-            self.prime = prime
+            if prime == "True":
+                self.prime = 1
+            else:
+                self.prime = 0
         if account_id is not None:
             self.account_id = account_id
+        if table_name is not None:
+            self.table_name = table_name
+        if deleted is not None:
+            self.deleted = deleted
+
+    @property
+    def table_name(self):
+        return self.table_name
 
     @property
     def id(self):
@@ -964,9 +1167,23 @@ class Telephone():
 
     @property
     def to_dict_external(self):
-        dictionary = self.__dict__
+        dictionary = self.to_dict
         del dictionary['id']
         del dictionary['account_id']
+        del dictionary['table_name']
+        del dictionary['deleted']
+        if dictionary['prime'] == 1:
+            dictionary['prime'] = "True"
+        elif dictionary['prime'] == 0:
+            dictionary['prime'] = "False"
+        return dictionary
+
+    @property
+    def to_api_dict(self):
+        dictionary = {}
+        dictionary['type'] = "Telephone"
+        dictionary['id'] = str(self.id)
+        dictionary['attributes'] = self.to_dict_external
         return dictionary
 
     @property
@@ -979,12 +1196,18 @@ class Telephone():
 
     def to_db(self, cursor=""):
 
-        sql_query = "INSERT INTO Telephones (tel, typeEnum, prime, Accounts_id) " \
-                    "VALUES ('%s', '%s', '%s', '%s')" % \
-                    (self.tel, self.type, self.prime, self.account_id)
+        sql_query = "INSERT INTO " + self.table_name + " (tel, entryType, prime, Accounts_id) " \
+                    "VALUES (%s, %s, %s, %s)"
+
+        arguments = (
+            str(self.tel),
+            str(self.type),
+            str(self.prime),
+            int(self.account_id),
+        )
 
         try:
-            cursor, last_id = execute_sql_insert(cursor=cursor, sql_query=sql_query)
+            cursor, last_id = execute_sql_insert_2(cursor=cursor, sql_query=sql_query, arguments=arguments)
         except Exception as exp:
             logger.debug('sql_query: ' + repr(exp))
             raise
@@ -998,15 +1221,12 @@ class Telephone():
 
         # TODO: Don't allow if role is only criteria
 
-        sql_query = "SELECT id, tel, typeEnum, prime, Accounts_id " \
-                    "FROM MyDataAccount.Particulars " \
-                    "WHERE id LIKE %s AND tel LIKE %s AND typeEnum LIKE %s AND prime LIKE %s AND Accounts_id LIKE %s;"
+        sql_query = "SELECT id, tel, entryType, prime, Accounts_id " \
+                    "FROM " + self.table_name + " " \
+                    "WHERE id LIKE %s AND Accounts_id LIKE %s;"
 
         arguments = (
             '%' + str(self.id) + '%',
-            '%' + str(self.tel) + '%',
-            '%' + str(self.type) + '%',
-            '%' + str(self.prime) + '%',
             '%' + str(self.account_id) + '%',
         )
 
@@ -1034,6 +1254,28 @@ class Telephone():
 
             return cursor
 
+    def update_db(self, cursor=""):
+
+        sql_query = "UPDATE " + self.table_name + " SET tel=%s, entryType=%s, prime=%s " \
+                                                  "WHERE id=%s AND Accounts_id=%s"
+
+        arguments = (
+            str(self.tel),
+            str(self.type),
+            str(self.prime),
+            str(self.id),
+            str(self.account_id),
+        )
+
+        try:
+            cursor = execute_sql_update(cursor=cursor, sql_query=sql_query, arguments=arguments)
+        except Exception as exp:
+            logger.debug('sql_query: ' + repr(exp))
+            raise
+        else:
+            logger.info("SQL query executed")
+            return cursor
+
 
 #####################
 class Settings():
@@ -1041,8 +1283,10 @@ class Settings():
     key = None
     value = None
     account_id = None
+    table_name = ""
+    deleted = ""
 
-    def __init__(self, id="", key="", value="", account_id=""):
+    def __init__(self, id="", key="", value="", account_id="", deleted=0, table_name="MyDataAccount.Settings"):
         if id is not None:
             self.id = id
         if key is not None:
@@ -1053,6 +1297,14 @@ class Settings():
             self.value = value
         if account_id is not None:
             self.account_id = account_id
+        if table_name is not None:
+            self.table_name = table_name
+        if deleted is not None:
+            self.deleted = deleted
+
+    @property
+    def table_name(self):
+        return self.table_name
 
     @property
     def id(self):
@@ -1092,9 +1344,19 @@ class Settings():
 
     @property
     def to_dict_external(self):
-        dictionary = self.__dict__
+        dictionary = self.to_dict
         del dictionary['id']
         del dictionary['account_id']
+        del dictionary['table_name']
+        del dictionary['deleted']
+        return dictionary
+
+    @property
+    def to_api_dict(self):
+        dictionary = {}
+        dictionary['type'] = "Setting"
+        dictionary['id'] = str(self.id)
+        dictionary['attributes'] = self.to_dict_external
         return dictionary
 
     @property
@@ -1107,12 +1369,17 @@ class Settings():
 
     def to_db(self, cursor=""):
 
-        sql_query = "INSERT INTO Settings (prefLang, timezone, Accounts_id) " \
-                    "VALUES ('%s', '%s', '%s')" % \
-                    (self.pref_lang, self.timezone, self.account_id)
+        sql_query = "INSERT INTO " + self.table_name + " (setting_key, setting_value, Accounts_id) " \
+                    "VALUES (%s, %s, %s)"
+
+        arguments = (
+            str(self.key),
+            str(self.value),
+            int(self.account_id),
+        )
 
         try:
-            cursor, last_id = execute_sql_insert(cursor=cursor, sql_query=sql_query)
+            cursor, last_id = execute_sql_insert_2(cursor=cursor, sql_query=sql_query, arguments=arguments)
         except Exception as exp:
             logger.debug('sql_query: ' + repr(exp))
             raise
@@ -1124,14 +1391,12 @@ class Settings():
         if cursor is None:
             raise AttributeError("Provide cursor as parameter")
 
-        sql_query = "SELECT id, key, value, Accounts_id " \
-                    "FROM MyDataAccount.Settings " \
-                    "WHERE id LIKE %s AND key LIKE %s AND value LIKE %s AND Accounts_id LIKE %s;"
+        sql_query = "SELECT id, setting_key, setting_value, Accounts_id " \
+                    "FROM " + self.table_name + " " \
+                    "WHERE id LIKE %s AND Accounts_id LIKE %s;"
 
         arguments = (
             '%' + str(self.id) + '%',
-            '%' + str(self.key) + '%',
-            '%' + str(self.value) + '%',
             '%' + str(self.account_id) + '%',
         )
 
@@ -1157,6 +1422,27 @@ class Settings():
 
             return cursor
 
+    def update_db(self, cursor=""):
+
+        sql_query = "UPDATE " + self.table_name + " SET setting_key=%s, setting_value=%s " \
+                                                  "WHERE id=%s AND Accounts_id=%s"
+
+        arguments = (
+            str(self.key),
+            str(self.value),
+            str(self.id),
+            str(self.account_id),
+        )
+
+        try:
+            cursor = execute_sql_update(cursor=cursor, sql_query=sql_query, arguments=arguments)
+        except Exception as exp:
+            logger.debug('sql_query: ' + repr(exp))
+            raise
+        else:
+            logger.info("SQL query executed")
+            return cursor
+
 
 #####################
 class EventLog():
@@ -1165,8 +1451,10 @@ class EventLog():
     event = None
     created = None
     account_id = None
+    table_name = ""
+    deleted = ""
 
-    def __init__(self, id="", actor="", event="", created="", account_id=""):
+    def __init__(self, id="", actor="", event="", created="", account_id="", deleted=0, table_name="MyDataAccount.EventLogs"):
         if id is not None:
             self.id = id
         if actor is not None:
@@ -1177,6 +1465,14 @@ class EventLog():
             self.created = created
         if account_id is not None:
             self.account_id = account_id
+        if table_name is not None:
+            self.table_name = table_name
+        if deleted is not None:
+            self.deleted = deleted
+
+    @property
+    def table_name(self):
+        return self.table_name
 
     @property
     def id(self):
@@ -1211,6 +1507,14 @@ class EventLog():
         self.created = value
 
     @property
+    def table_name(self):
+        return self.table_name
+
+    @table_name.setter
+    def table_name(self, value):
+        self._table_name = value
+
+    @property
     def account_id(self):
         return self.account_id
 
@@ -1224,9 +1528,19 @@ class EventLog():
 
     @property
     def to_dict_external(self):
-        dictionary = self.__dict__
+        dictionary = self.to_dict
         del dictionary['id']
         del dictionary['account_id']
+        del dictionary['table_name']
+        del dictionary['deleted']
+        return dictionary
+
+    @property
+    def to_api_dict(self):
+        dictionary = {}
+        dictionary['type'] = "Event"
+        dictionary['id'] = str(self.id)
+        dictionary['attributes'] = self.to_dict_external
         return dictionary
 
     @property
@@ -1239,12 +1553,18 @@ class EventLog():
 
     def to_db(self, cursor=""):
 
-        sql_query = "INSERT INTO EventLogs (actor, event, created, Accounts_id) " \
-                    "VALUES ('%s', '%s', '%s', '%s')" % \
-                    (self.actor, self.event, self.created, self.account_id)
+        sql_query = "INSERT INTO " + self.table_name + " (actor, event, created, Accounts_id) " \
+                    "VALUES (%s, %s, %s, %s)"
+
+        arguments = (
+            str(self.actor),
+            str(self.event),
+            int(self.created),
+            int(self.account_id),
+        )
 
         try:
-            cursor, last_id = execute_sql_insert(cursor=cursor, sql_query=sql_query)
+            cursor, last_id = execute_sql_insert_2(cursor=cursor, sql_query=sql_query, arguments=arguments)
         except Exception as exp:
             logger.debug('sql_query: ' + repr(exp))
             raise
@@ -1256,17 +1576,12 @@ class EventLog():
         if cursor is None:
             raise AttributeError("Provide cursor as parameter")
 
-        # TODO: Don't allow if role is only criteria
-
         sql_query = "SELECT id, actor, event, created, Accounts_id " \
-                    "FROM MyDataAccount.EventLogs " \
-                    "WHERE id LIKE %s AND actor LIKE %s AND event LIKE %s AND created LIKE %s AND Accounts_id LIKE %s;"
+                    "FROM " + self.table_name + " " \
+                    "WHERE id LIKE %s AND Accounts_id LIKE %s;"
 
         arguments = (
             '%' + str(self.id) + '%',
-            '%' + str(self.actor) + '%',
-            '%' + str(self.event) + '%',
-            '%' + str(self.created) + '%',
             '%' + str(self.account_id) + '%',
         )
 
@@ -1292,6 +1607,14 @@ class EventLog():
                 self.created = data[0][3]
                 self.account_id = data[4]
 
+            try:
+                event_copy = self.event
+                logger.info("event to dict")
+                self.event = json.loads(self.event)
+            except Exception as exp:
+                logger.info("Could not event consent_status_record to dict. Using original")
+                self.event = event_copy
+
             return cursor
 
 
@@ -1304,11 +1627,13 @@ class Contacts():
     city = None
     state = None
     country = None
-    typeEnum = None
+    entryType = None
     prime = None
     account_id = None
+    table_name = ""
+    deleted = ""
 
-    def __init__(self, id="", address1="", address2="", postal_code="", city="", state="", country="", type="Personal", prime="", account_id=""):
+    def __init__(self, id="", address1="", address2="", postal_code="", city="", state="", country="", type="Personal", prime="", account_id="", deleted=0, table_name="MyDataAccount.Contacts"):
         if id is not None:
             self.id = id
         if address1 is not None:
@@ -1326,9 +1651,20 @@ class Contacts():
         if type is not None:
             self.type = type
         if prime is not None:
-            self.prime = prime
+            if prime == "True":
+                self.prime = 1
+            else:
+                self.prime = 0
         if account_id is not None:
             self.account_id = account_id
+        if table_name is not None:
+            self.table_name = table_name
+        if deleted is not None:
+            self.deleted = deleted
+
+    @property
+    def table_name(self):
+        return self.table_name
 
     @property
     def id(self):
@@ -1416,9 +1752,23 @@ class Contacts():
 
     @property
     def to_dict_external(self):
-        dictionary = self.__dict__
+        dictionary = self.to_dict
         del dictionary['id']
         del dictionary['account_id']
+        del dictionary['table_name']
+        del dictionary['deleted']
+        if dictionary['prime'] == 1:
+            dictionary['prime'] = "True"
+        elif dictionary['prime'] == 0:
+            dictionary['prime'] = "False"
+        return dictionary
+
+    @property
+    def to_api_dict(self):
+        dictionary = {}
+        dictionary['type'] = "Contact"
+        dictionary['id'] = str(self.id)
+        dictionary['attributes'] = self.to_dict_external
         return dictionary
 
     @property
@@ -1431,12 +1781,23 @@ class Contacts():
 
     def to_db(self, cursor=""):
 
-        sql_query = "INSERT INTO Contacts (address1, address2, postalCode, city, state, country, typeEnum, prime, Accounts_id) " \
-                    "VALUES ('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s')" % \
-                    (self.address1, self.address2, self.postal_code, self.city, self.state, self.country, self.type, self.prime, self.account_id)
+        sql_query = "INSERT INTO " + self.table_name + " (address1, address2, postalCode, city, state, country, entryType, prime, Accounts_id) " \
+                    "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"
+
+        arguments = (
+            str(self.address1),
+            str(self.address2),
+            str(self.postal_code),
+            str(self.city),
+            str(self.state),
+            str(self.country),
+            str(self.type),
+            str(self.prime),
+            int(self.account_id),
+        )
 
         try:
-            cursor, last_id = execute_sql_insert(cursor=cursor, sql_query=sql_query)
+            cursor, last_id = execute_sql_insert_2(cursor=cursor, sql_query=sql_query, arguments=arguments)
         except Exception as exp:
             logger.debug('sql_query: ' + repr(exp))
             raise
@@ -1444,28 +1805,44 @@ class Contacts():
             self.id = last_id
             return cursor
 
+    def update_db(self, cursor=""):
+
+        sql_query = "UPDATE " + self.table_name + " SET address1=%s, address2=%s, postalCode=%s, city=%s, state=%s, " \
+                                                  "country=%s, entryType=%s, prime=%s " \
+                                                  "WHERE id=%s AND Accounts_id=%s"
+
+        arguments = (
+            str(self.address1),
+            str(self.address2),
+            str(self.postal_code),
+            str(self.city),
+            str(self.state),
+            str(self.country),
+            str(self.type),
+            str(self.prime),
+            str(self.id),
+            str(self.account_id),
+        )
+
+        try:
+            cursor = execute_sql_update(cursor=cursor, sql_query=sql_query, arguments=arguments)
+        except Exception as exp:
+            logger.debug('sql_query: ' + repr(exp))
+            raise
+        else:
+            logger.info("SQL query executed")
+            return cursor
+
     def from_db(self, cursor=None):
         if cursor is None:
             raise AttributeError("Provide cursor as parameter")
 
-        # TODO: Don't allow if role is only criteria
-
-        sql_query = "SELECT id, address1, address2, postal_code, city, state, country, typeEnum, prime, Accounts_id " \
-                    "FROM MyDataAccount.Contacts " \
-                    "WHERE id LIKE %s AND address1 LIKE %s AND address2 LIKE %s AND postal_code LIKE %s " \
-                    "AND city LIKE %s AND state LIKE %s AND country LIKE %s AND typeEnum LIKE %s " \
-                    "AND prime LIKE %s AND Accounts_id LIKE %s;"
+        sql_query = "SELECT id, address1, address2, postalCode, city, state, country, entryType, prime, Accounts_id " \
+                    "FROM " + self.table_name + " " \
+                    "WHERE id LIKE %s AND Accounts_id LIKE %s;"
 
         arguments = (
             '%' + str(self.id) + '%',
-            '%' + str(self.address1) + '%',
-            '%' + str(self.address2) + '%',
-            '%' + str(self.postal_code) + '%',
-            '%' + str(self.city) + '%',
-            '%' + str(self.state) + '%',
-            '%' + str(self.country) + '%',
-            '%' + str(self.typeEnum) + '%',
-            '%' + str(self.prime) + '%',
             '%' + str(self.account_id) + '%',
         )
 
@@ -1513,8 +1890,10 @@ class ServiceLinkRecord():
     surrogate_id = None
     operator_id = None
     account_id = None
+    table_name = ""
+    deleted = ""
 
-    def __init__(self, id="", service_link_record="", service_link_record_id="", service_id="", surrogate_id="", operator_id="", account_id=""):
+    def __init__(self, id="", service_link_record="", service_link_record_id="", service_id="", surrogate_id="", operator_id="", account_id="", deleted=0, table_name="MyDataAccount.ServiceLinkRecords"):
         if id is not None:
             self.id = id
         if service_link_record is not None:
@@ -1529,6 +1908,14 @@ class ServiceLinkRecord():
             self.surrogate_id = surrogate_id
         if account_id is not None:
             self.account_id = account_id
+        if table_name is not None:
+            self.table_name = table_name
+        if deleted is not None:
+            self.deleted = deleted
+
+    @property
+    def table_name(self):
+        return self.table_name
 
     @property
     def id(self):
@@ -1592,9 +1979,33 @@ class ServiceLinkRecord():
 
     @property
     def to_dict_external(self):
-        dictionary = self.__dict__
+        dictionary = self.to_dict
         del dictionary['id']
         del dictionary['account_id']
+        del dictionary['table_name']
+        del dictionary['deleted']
+        return dictionary
+
+    @property
+    def to_api_dict(self):
+        dictionary = {}
+        dictionary['type'] = "ServiceLinkRecord"
+        dictionary['id'] = str(self.service_link_record_id)
+        dictionary['attributes'] = self.to_dict_external
+        return dictionary
+
+    @property
+    def to_record_dict_external(self):
+        dictionary = {}
+        dictionary["slr"] = self.service_link_record
+        return dictionary
+
+    @property
+    def to_record_dict(self):
+        dictionary = {}
+        dictionary['type'] = "ServiceLinkRecord"
+        dictionary['id'] = str(self.service_link_record_id)
+        dictionary['attributes'] = self.to_record_dict_external
         return dictionary
 
     @property
@@ -1609,10 +2020,10 @@ class ServiceLinkRecord():
 
         # http://stackoverflow.com/questions/3617052/escape-string-python-for-mysql/27575399#27575399
         # sql_query = "INSERT INTO ServiceLinkRecords (serviceLinkRecord, serviceLinkRecordId, serviceId, surrogateId, operatorId, Accounts_id) " \
-        #             "VALUES ('%s', '%s', '%s', '%s', '%s', '%s')" % \
+        #             "VALUES (%s, %s, %s, %s, %s, %s)" % \
         #             (self.service_link_record, self.service_link_record_id, self.service_id, self.surrogate_id, self.operator_id, self.account_id)
 
-        sql_query = "INSERT INTO ServiceLinkRecords (" \
+        sql_query = "INSERT INTO " + self.table_name + " (" \
                     "serviceLinkRecord, " \
                     "serviceLinkRecordId, " \
                     "serviceId, " \
@@ -1622,12 +2033,12 @@ class ServiceLinkRecord():
                     ") VALUES (%s, %s, %s, %s, %s, %s)"
 
         arguments = (
-            str(self.service_link_record),
+            json.dumps(self.service_link_record),
             str(self.service_link_record_id),
             str(self.service_id),
             str(self.surrogate_id),
             str(self.operator_id),
-            str(self.account_id),
+            int(self.account_id),
         )
 
         try:
@@ -1645,7 +2056,7 @@ class ServiceLinkRecord():
         # TODO: Don't allow if role is only criteria
 
         sql_query = "SELECT id, serviceLinkRecord, Accounts_id, serviceLinkRecordId, serviceId, surrogateId, operatorId  " \
-                    "FROM MyDataAccount.ServiceLinkRecords " \
+                    "FROM " + self.table_name + " " \
                     "WHERE id LIKE %s AND serviceLinkRecord LIKE %s AND serviceLinkRecordId LIKE %s AND " \
                     "serviceId LIKE %s AND surrogateId LIKE %s AND operatorId LIKE %s AND Accounts_id LIKE %s;"
 
@@ -1684,6 +2095,16 @@ class ServiceLinkRecord():
                 self.service_id = data[4]
                 self.surrogate_id = data[5]
                 self.operator_id = data[6]
+
+            try:
+                slr_copy = self.service_link_record
+                logger.info("service_link_record to dict")
+                self.service_link_record = json.loads(self.service_link_record)
+            except Exception as exp:
+                attribute_type = type(self.service_link_record)
+                logger.info("Could not convert service_link_record to dict. Type of attribute: " + repr(attribute_type) + " Using original" + repr(attribute_type) + " Using original: " + repr(exp))
+                self.service_link_record = slr_copy
+
             return cursor
 
 
@@ -1696,8 +2117,10 @@ class ServiceLinkStatusRecord():
     issued_at = None
     prev_record_id = None
     service_link_records_id = None
+    table_name = ""
+    deleted = ""
 
-    def __init__(self, id="", service_link_status_record_id="", status="", service_link_status_record="", service_link_record_id="", issued_at="", prev_record_id="", service_link_records_id=""):
+    def __init__(self, id="", service_link_status_record_id="", status="", service_link_status_record="", service_link_record_id="", issued_at="", prev_record_id="", service_link_records_id="", deleted=0, table_name="MyDataAccount.ServiceLinkStatusRecords"):
         if id is not None:
             self.id = id
         if service_link_status_record_id is not None:
@@ -1714,6 +2137,14 @@ class ServiceLinkStatusRecord():
             self.prev_record_id = prev_record_id
         if service_link_records_id is not None:
             self.service_link_records_id = service_link_records_id
+        if table_name is not None:
+            self.table_name = table_name
+        if deleted is not None:
+            self.deleted = deleted
+
+    @property
+    def table_name(self):
+        return self.table_name
 
     @property
     def id(self):
@@ -1785,9 +2216,33 @@ class ServiceLinkStatusRecord():
 
     @property
     def to_dict_external(self):
-        dictionary = self.__dict__
+        dictionary = self.to_dict
         del dictionary['id']
         del dictionary['service_link_records_id']
+        del dictionary['table_name']
+        del dictionary['deleted']
+        return dictionary
+
+    @property
+    def to_api_dict(self):
+        dictionary = {}
+        dictionary['type'] = "ServiceLinkStatusRecord"
+        dictionary['id'] = str(self.service_link_status_record_id)
+        dictionary['attributes'] = self.to_dict_external
+        return dictionary
+
+    @property
+    def to_record_dict_external(self):
+        dictionary = {}
+        dictionary["slsr"] = self.service_link_status_record
+        return dictionary
+
+    @property
+    def to_record_dict(self):
+        dictionary = {}
+        dictionary['type'] = "ServiceLinkStatusRecord"
+        dictionary['id'] = str(self.service_link_status_record_id)
+        dictionary['attributes'] = self.to_record_dict_external
         return dictionary
 
     @property
@@ -1801,10 +2256,10 @@ class ServiceLinkStatusRecord():
     def to_db(self, cursor=""):
 
         # sql_query = "INSERT INTO ServiceLinkRecords (serviceLinkStatusRecordId, status, serviceLinkStatusRecord, ServiceLinkRecords_id, serviceLinkRecordId, issued_at, prevRecordId) " \
-        #             "VALUES ('%s','%s', '%s', '%s', '%s', '%s', '%s')" % \
+        #             "VALUES (%s,%s, %s, %s, %s, %s, %s)" % \
         #             (self.service_link_status_record_id, self.status, self.service_link_status_record, self.service_link_records_id, self.service_link_record_id, self.issued_at, self.prev_record_id)
 
-        sql_query = "INSERT INTO ServiceLinkStatusRecords (" \
+        sql_query = "INSERT INTO " + self.table_name + " (" \
                     "serviceLinkStatusRecordId, " \
                     "serviceLinkStatus, " \
                     "serviceLinkStatusRecord, " \
@@ -1817,10 +2272,10 @@ class ServiceLinkStatusRecord():
         arguments = (
             str(self.service_link_status_record_id),
             str(self.status),
-            str(self.service_link_status_record),
+            json.dumps(self.service_link_status_record),
             int(self.service_link_records_id),
             str(self.service_link_record_id),
-            str(self.issued_at),
+            int(self.issued_at),
             str(self.prev_record_id),
         )
 
@@ -1842,7 +2297,7 @@ class ServiceLinkStatusRecord():
 
         sql_query = "SELECT id, serviceLinkStatus, serviceLinkStatusRecord, ServiceLinkRecords_id, serviceLinkRecordId, " \
                     "issued_at, prevRecordId, serviceLinkStatusRecordId " \
-                    "FROM MyDataAccount.ServiceLinkStatusRecords " \
+                    "FROM " + self.table_name + " " \
                     "WHERE id LIKE %s AND serviceLinkStatus LIKE %s AND serviceLinkStatusRecord LIKE %s AND " \
                     "ServiceLinkRecords_id LIKE %s AND serviceLinkRecordId LIKE %s AND issued_at LIKE %s AND " \
                     "prevRecordId LIKE %s AND serviceLinkStatusRecordId LIKE %s;"
@@ -1886,21 +2341,37 @@ class ServiceLinkStatusRecord():
                 self.prev_record_id = data[6]
                 self.service_link_status_record_id = data[7]
 
+            try:
+                slsr_copy = self.service_link_status_record
+                logger.info("service_link_status_record to dict")
+                self.service_link_status_record = json.loads(self.service_link_status_record)
+            except Exception as exp:
+                attribute_type = type(self.service_link_status_record)
+                logger.info("Could not convert service_link_status_record to dict. Type of attribute: " + repr(attribute_type) + " Using original" + repr(attribute_type) + " Using original: " + repr(exp))
+                self.service_link_status_record = slsr_copy
+
             return cursor
 
 
 class SurrogateId():
     # TODO: Rename to SlrIDs or similar
+    # TODO: How to react if slr is deleted?
     surrogate_id = None
     servicelinkrecord_id = None
     service_id = None
     account_id = None
+    table_name = ""
+    deleted = ""
 
-    def __init__(self, service_id=None, account_id=None):
+    def __init__(self, service_id=None, account_id=None, deleted=0, table_name="MyDataAccount.ServiceLinkRecords"):
         if service_id is not None:
             self.service_id = service_id
         if account_id is not None:
             self.account_id = account_id
+        if table_name is not None:
+            self.table_name = table_name
+        if deleted is not None:
+            self.deleted = deleted
 
     @property
     def surrogate_id(self):
@@ -1932,8 +2403,16 @@ class SurrogateId():
 
     @property
     def to_dict_external(self):
-        dictionary = self.__dict__
+        dictionary = self.to_dict
         del dictionary['id']
+        return dictionary
+
+    @property
+    def to_api_dict(self):
+        dictionary = {}
+        dictionary['type'] = "SurrogateId"
+        dictionary['id'] = str(self.id)
+        dictionary['attributes'] = self.to_dict_external
         return dictionary
 
     @property
@@ -1947,7 +2426,7 @@ class SurrogateId():
     def from_db(self, cursor=""):
 
         sql_query = "SELECT surrogateId, serviceLinkRecordId " \
-                    "FROM MyDataAccount.ServiceLinkRecords " \
+                    "FROM " + self.table_name + " " \
                     "WHERE serviceId LIKE %s AND Accounts_id LIKE %s ORDER BY id DESC LIMIT 1;"
 
         arguments = (
@@ -1984,8 +2463,10 @@ class ConsentRecord():
     subject_id = None
     service_link_records_id = None
     role = None
+    table_name = ""
+    deleted = ""
 
-    def __init__(self, id="", consent_record="", consent_id="", surrogate_id="", resource_set_id="", service_link_record_id="", subject_id="", service_link_records_id="", role=""):
+    def __init__(self, id="", consent_record="", consent_id="", surrogate_id="", resource_set_id="", service_link_record_id="", subject_id="", service_link_records_id="", role="", deleted=0, table_name="MyDataAccount.ConsentRecords"):
         self.id = id
         self.consent_record = consent_record
         self.surrogate_id = surrogate_id
@@ -1995,6 +2476,14 @@ class ConsentRecord():
         self.subject_id = subject_id
         self.service_link_records_id = service_link_records_id
         self.role = role
+        if table_name is not None:
+            self.table_name = table_name
+        if deleted is not None:
+            self.deleted = deleted
+
+    @property
+    def table_name(self):
+        return self.table_name
 
     @property
     def id(self):
@@ -2074,9 +2563,33 @@ class ConsentRecord():
 
     @property
     def to_dict_external(self):
-        dictionary = self.__dict__
+        dictionary = self.to_dict
         del dictionary['id']
         del dictionary['service_link_records_id']
+        del dictionary['table_name']
+        del dictionary['deleted']
+        return dictionary
+
+    @property
+    def to_api_dict(self):
+        dictionary = {}
+        dictionary['type'] = "ConsentRecord"
+        dictionary['id'] = str(self.consent_id)
+        dictionary['attributes'] = self.to_dict_external
+        return dictionary
+
+    @property
+    def to_record_dict_external(self):
+        dictionary = {}
+        dictionary["cr"] = self.consent_record
+        return dictionary
+
+    @property
+    def to_record_dict(self):
+        dictionary = {}
+        dictionary['type'] = "ConsentRecord"
+        dictionary['id'] = str(self.consent_id)
+        dictionary['attributes'] = self.to_record_dict_external
         return dictionary
 
     @property
@@ -2089,7 +2602,7 @@ class ConsentRecord():
 
     def to_db(self, cursor=""):
 
-        sql_query = "INSERT INTO ConsentRecords (" \
+        sql_query = "INSERT INTO " + self.table_name + " (" \
                     "consentRecord, " \
                     "surrogateId, " \
                     "consentRecordId, " \
@@ -2101,13 +2614,13 @@ class ConsentRecord():
                     ") VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
 
         arguments = (
-            str(self.consent_record),
+            json.dumps(self.consent_record),
             str(self.surrogate_id),
             str(self.consent_id),
             str(self.resource_set_id),
             str(self.service_link_record_id),
             str(self.subject_id),
-            str(self.service_link_records_id),
+            int(self.service_link_records_id),
             str(self.role),
         )
 
@@ -2126,7 +2639,7 @@ class ConsentRecord():
         # TODO: Don't allow if role is only criteria
 
         sql_query = "SELECT id, consentRecord, ServiceLinkRecords_id, surrogateId, consentRecordId, ResourceSetId, serviceLinkRecordId, subjectId, role " \
-                    "FROM MyDataAccount.ConsentRecords " \
+                    "FROM " + self.table_name + " " \
                     "WHERE id LIKE %s AND ServiceLinkRecords_id LIKE %s AND surrogateId LIKE %s AND " \
                     "consentRecordId LIKE %s AND ResourceSetId LIKE %s AND serviceLinkRecordId LIKE %s AND " \
                     "subjectId LIKE %s AND role LIKE %s;"
@@ -2150,7 +2663,7 @@ class ConsentRecord():
         else:
             logger.debug("Got data: " + repr(data))
             if len(data) == 0:
-                raise IndexError("Surrogate Id and serviceLinkRecordId could not be found with provided information")
+                raise IndexError("Consent Record could not be found with provided information")
             if len(data[0]):
                 self.id = data[0][0]
                 self.consent_record = data[0][1]
@@ -2173,10 +2686,13 @@ class ConsentRecord():
                 self.role = data[8]
 
             try:
+                cr_copy = self.consent_record
+                logger.info("consent_record to dict")
                 self.consent_record = json.loads(self.consent_record)
             except Exception as exp:
-                logger.debug('Could not load json from consent_record: ' + repr(exp))
-                raise
+                attribute_type = type(self.consent_record)
+                logger.error("Could not convert consent_record to dict. Type of attribute: " + repr(attribute_type) + " Using original: " + repr(exp))
+                self.consent_record = cr_copy
 
             return cursor
 
@@ -2184,15 +2700,20 @@ class ConsentRecord():
 class ConsentStatusRecord():
     id = None
     status = None
+    consent_status_record_id = None
     consent_status_record = None
     consent_records_id = None
     consent_record_id = None
     issued_at = None
     prev_record_id = None
+    table_name = ""
+    deleted = ""
 
-    def __init__(self, id="", status="", consent_status_record="", consent_records_id="", consent_record_id="", issued_at="", prev_record_id=""):
+    def __init__(self, id="", consent_status_record_id="", status="", consent_status_record="", consent_records_id="", consent_record_id="", issued_at="", prev_record_id="", deleted=0, table_name="MyDataAccount.ConsentStatusRecords"):
         if id is not None:
             self.id = id
+        if consent_status_record_id is not None:
+            self.consent_status_record_id = consent_status_record_id
         if status is not None:
             self.status = status
         if consent_status_record is not None:
@@ -2205,6 +2726,14 @@ class ConsentStatusRecord():
             self.issued_at = issued_at
         if prev_record_id is not None:
             self.prev_record_id = prev_record_id
+        if table_name is not None:
+            self.table_name = table_name
+        if deleted is not None:
+            self.deleted = deleted
+
+    @property
+    def table_name(self):
+        return self.table_name
 
     @property
     def id(self):
@@ -2213,6 +2742,14 @@ class ConsentStatusRecord():
     @id.setter
     def id(self, value):
         self.id = value
+
+    @property
+    def consent_status_record_id(self):
+        return self.consent_status_record_id
+
+    @consent_status_record_id.setter
+    def consent_status_record_id(self, value):
+        self.consent_status_record_id = value
 
     @property
     def status(self):
@@ -2268,9 +2805,33 @@ class ConsentStatusRecord():
 
     @property
     def to_dict_external(self):
-        dictionary = self.__dict__
+        dictionary = self.to_dict
         del dictionary['id']
         del dictionary['consent_records_id']
+        del dictionary['table_name']
+        del dictionary['deleted']
+        return dictionary
+
+    @property
+    def to_api_dict(self):
+        dictionary = {}
+        dictionary['type'] = "ConsentStatusRecord"
+        dictionary['id'] = str(self.consent_status_record_id)
+        dictionary['attributes'] = self.to_dict_external
+        return dictionary
+
+    @property
+    def to_record_dict_external(self):
+        dictionary = {}
+        dictionary["csr"] = self.consent_status_record
+        return dictionary
+
+    @property
+    def to_record_dict(self):
+        dictionary = {}
+        dictionary['type'] = "ConsentStatusRecord"
+        dictionary['id'] = str(self.consent_status_record_id)
+        dictionary['attributes'] = self.to_record_dict_external
         return dictionary
 
     @property
@@ -2283,21 +2844,23 @@ class ConsentStatusRecord():
 
     def to_db(self, cursor=""):
 
-        sql_query = "INSERT INTO ConsentStatusRecords (" \
+        sql_query = "INSERT INTO " + self.table_name + " (" \
+                    "consentStatusRecordId, " \
                     "consentStatus, " \
                     "consentStatusRecord, " \
                     "ConsentRecords_id, " \
                     "consentRecordId, " \
                     "issued_at, " \
                     "prevRecordId" \
-                    ") VALUES (%s, %s, %s, %s, %s, %s)"
+                    ") VALUES (%s, %s, %s, %s, %s, %s, %s)"
 
         arguments = (
+            str(self.consent_status_record_id),
             str(self.status),
-            str(self.consent_status_record),
-            str(self.consent_records_id),
+            json.dumps(self.consent_status_record),
+            int(self.consent_records_id),
             str(self.consent_record_id),
-            str(self.issued_at),
+            int(self.issued_at),
             str(self.prev_record_id),
         )
 
@@ -2317,15 +2880,16 @@ class ConsentStatusRecord():
 
         # TODO: Don't allow if role is only criteria
 
-        sql_query = "SELECT id, consentStatus, consentStatusRecord, ConsentRecords_id, consentRecordId, " \
-                    "issued_at, prevRecordId " \
-                    "FROM MyDataAccount.ConsentStatusRecords " \
-                    "WHERE id LIKE %s AND consentStatus LIKE %s AND consentStatusRecord LIKE %s AND " \
-                    "ConsentRecords_id LIKE %s AND consentRecordId LIKE %s AND issued_at LIKE %s AND " \
-                    "prevRecordId LIKE %s;"
+        sql_query = "SELECT id, consentStatusRecordId, consentStatus, consentStatusRecord, ConsentRecords_id, " \
+                    "consentRecordId, issued_at, prevRecordId " \
+                    "FROM " + self.table_name + " " \
+                    "WHERE id LIKE %s AND consentStatusRecordId LIKE %s AND consentStatus LIKE %s " \
+                    "AND consentStatusRecord LIKE %s AND  ConsentRecords_id LIKE %s AND " \
+                    "consentRecordId LIKE %s AND issued_at LIKE %s AND prevRecordId LIKE %s;"
 
         arguments = (
             '%' + str(self.id) + '%',
+            '%' + str(self.consent_status_record_id) + '%',
             '%' + str(self.status) + '%',
             '%' + str(self.consent_status_record) + '%',
             '%' + str(self.consent_records_id) + '%',
@@ -2345,20 +2909,31 @@ class ConsentStatusRecord():
                 raise IndexError("DB query returned no results")
             if len(data[0]):
                 self.id = data[0][0]
-                self.status = data[0][1]
-                self.consent_status_record = data[0][2]
-                self.consent_records_id = data[0][3]
-                self.consent_record_id = data[0][4]
-                self.issued_at = data[0][5]
-                self.prev_record_id = data[0][6]
+                self.consent_status_record_id = data[0][1]
+                self.status = data[0][2]
+                self.consent_status_record = data[0][3]
+                self.consent_records_id = data[0][4]
+                self.consent_record_id = data[0][5]
+                self.issued_at = data[0][6]
+                self.prev_record_id = data[0][7]
             else:
                 self.id = data[0]
-                self.status = data[1]
-                self.consent_status_record = data[2]
-                self.consent_records_id = data[3]
-                self.consent_record_id = data[4]
-                self.issued_at = data[5]
-                self.prev_record_id = data[6]
+                self.consent_status_record_id = data[1]
+                self.status = data[2]
+                self.consent_status_record = data[3]
+                self.consent_records_id = data[4]
+                self.consent_record_id = data[5]
+                self.issued_at = data[6]
+                self.prev_record_id = data[7]
+
+            try:
+                csr_copy = self.consent_status_record
+                logger.info("consent_status_record to dict")
+                self.consent_status_record = json.loads(self.consent_status_record)
+            except Exception as exp:
+                attribute_type = type(self.consent_status_record)
+                logger.error("Could not convert consent_status_record to dict. Type of attribute: " + repr(attribute_type) + " Using original: " + repr(exp))
+                self.consent_status_record = csr_copy
 
             return cursor
 

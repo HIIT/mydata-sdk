@@ -48,7 +48,7 @@ class Start(Resource):
     def __init__(self):
         super(Start, self).__init__()
         self.app = current_app
-        self.service_registry_handler = ServiceRegistryHandler()
+        self.service_registry_handler = ServiceRegistryHandler(current_app.config["SERVICE_REGISTRY_SEARCH_DOMAIN"], current_app.config["SERVICE_REGISTRY_SEARCH_ENDPOINT"])
         self.request_timeout = current_app.config["TIMEOUT"]
         self.helper = Helpers(current_app.config)
         self.store_session = self.helper.store_session
@@ -60,14 +60,16 @@ class Start(Resource):
                 to_store = {}  # We want to store some information for later parts of flow.
 
                 # This address needs to be fetched somewhere to support multiple services
-                service_mgmnt_address = self.service_registry_handler.getService_url(service_id)
-
+                service_json = self.service_registry_handler.getService(service_id)
+                service_domain = service_json["serviceInstance"][0]["domain"]
+                service_access_uri = service_json["serviceInstance"][0]["serviceAccessEndPoint"]["serviceAccessURI"]
+                service_login_uri = service_json["serviceInstance"][0]["loginUri"]
                 # Endpoint address should be fetched somewhere as well so we can re-use the service address later easily.
-                endpoint = "/api/1.2/slr/code"
-
+                endpoint = "/slr/code"  # TODO: Comment above
+                endpoint = "{}{}{}".format(service_domain, service_access_uri, endpoint)
 
                 sq.send_to("Service_Components Mgmnt", "Fetch code from service_mgmnt")
-                result = get("{}{}".format(service_mgmnt_address, endpoint), timeout=self.request_timeout)
+                result = get(endpoint, timeout=self.request_timeout)
                 code_status = result.status_code
 
                 sq.task("Check code request is valid")
@@ -101,8 +103,9 @@ class Start(Resource):
 
             try:
                 endpoint = "/api/1.2/slr/login"
+                endpoint = "{}{}{}".format(service_domain, service_access_uri, service_login_uri)
                 sq.send_to("Service_Components Mgmnt", "Redirect user to Service_Components Mgmnt login")
-                result = post("{}{}".format(service_mgmnt_address, endpoint), json=code, timeout=self.request_timeout)
+                result = post(endpoint, json=code, timeout=self.request_timeout)
                 debug_log.info("####Response to this end point: {}\n{}".format(result.status_code, result.text))
                 if not result.ok:
                     raise DetailedHTTPException(status=result.status_code,

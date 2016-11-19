@@ -1,0 +1,71 @@
+---
+swagger: "2.0"
+info:
+  version: "1.2"
+  title: "Sink DC API"
+host: "example.sink.example"
+basePath: "/api/1.2/sink_flow"
+paths:
+  /dc:
+    get:
+      tags:
+      - "Sink"
+      description: "End point that initializes data connection flow "
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - in: "body"
+        name: "body"
+        description: "payload detailing data"
+        required: true
+        schema:
+          $ref: "#/definitions/DcPayload"
+      - in: "query"
+        name: dataset_id
+        description: "Dataset we want to request data for"
+        type: string
+      responses:
+        200:
+          description: "Returns 200 OK"
+
+        500:
+          description: "Internal server error. The actual status code and content of the error message may vary depending on error occurred."
+          schema:
+            $ref: "#/definitions/errors"
+
+
+
+definitions:
+  errors:
+      type: object
+      properties:
+        status:
+          type: string
+          description: HTTP status code as string value.
+        code:
+          type: integer
+          description: HTTP status code
+        title:
+          type: string
+          description: Title of error message.
+        detail:
+          type: string
+          description: Detailed error message.
+        source:
+          type: string
+          description: Source URI
+
+  DcPayload:
+      type: object
+      properties:
+        surrogate_id:
+          type: string
+          description: string containing surrogate_id
+        cr_id:
+          type: string
+          description: string contaning cr_id
+        rs_id:
+          type: string
+          description: string containing rs_id

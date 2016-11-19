@@ -25,7 +25,7 @@ paths:
           $ref: "#/definitions/LinkParams"
       responses:
         200:
-          description: "Returns 200 OK or Error message"
+          description: "Returns 200 OK"
         500:
           description: "Internal server error"
           schema:
@@ -39,8 +39,8 @@ paths:
     get:
       tags:
       - "Operator"
-      description: "Entry point for creating new SLR with service\nWill takes a UUID\
-        \ of service to link with as paramater"
+      description: "Entry point for creating new SLR with service.\nWill take UUID\
+        \ of service to link with as paramater. This will start chain of events."
       parameters:
       - name: "account_id"
         in: "path"
@@ -58,7 +58,7 @@ paths:
         200:
           description: "Returns 200 OK"
         500:
-          description: "Internal server error"
+          description: "Internal server error. The actual status code and content of the error message may vary depending on error occurred."
           schema:
             $ref: "#/definitions/errors"
         504:
@@ -96,7 +96,7 @@ paths:
           schema:
             $ref: "#/definitions/VerifyResponse"
         500:
-          description: "Internal server error"
+          description: "Internal server error. The actual status code and content of the error message may vary depending on error occurred."
           schema:
             $ref: "#/definitions/errors"
         502:

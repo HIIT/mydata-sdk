@@ -1,0 +1,152 @@
+# -*- coding: utf-8 -*-
+from kombu import Exchange, Queue
+
+TIMEOUT = 8
+
+KEYSIZE = 512
+
+{% if IS_SINK is defined %}
+IS_SINK = {{ IS_SINK }}
+{% else %}
+IS_SINK = True
+{% endif %}
+
+{% if IS_SOURCE is defined %}
+IS_SOURCE = {{ IS_SOURCE }}
+{% else %}
+IS_SOURCE = True
+{% endif %}
+
+# Name of host to connect to. Default: use the local host via a UNIX socket (where applicable)
+{% if MYSQL_HOST is defined %}
+MYSQL_HOST = {{ MYSQL_HOST }}
+{% else %}
+MYSQL_HOST = 'localhost'
+{% endif %}
+
+ # User to authenticate as. Default: current effective user.
+{% if MYSQL_USER is defined %}
+MYSQL_USER = {{ MYSQL_USER }}
+{% else %}
+MYSQL_USER = 'service'
+{% endif %}
+
+# Password to authenticate with. Default: no password.
+{% if MYSQL_PASSWORD is defined %}
+MYSQL_PASSWORD = {{ MYSQL_PASSWORD }}
+{% else %}
+MYSQL_PASSWORD = 'MynorcA'
+{% endif %}
+
+# Database to use. Default: no default database.
+{% if MYSQL_DB is defined %}
+MYSQL_DB = {{ MYSQL_DB }}
+{% else %}
+MYSQL_DB = 'db_Srv'
+{% endif %}
+
+# TCP port of MySQL server. Default: 3306.
+{% if MYSQL_PORT is defined %}
+MYSQL_PORT = {{ MYSQL_PORT }}
+{% else %}
+MYSQL_PORT = 3306
+{% endif %}
+
+
+
+
+
+# Setting to /tmp or other ramdisk makes it faster.
+{% if DATABASE_PATH is defined %}
+DATABASE_PATH = {{ DATABASE_PATH }}
+{% else %}
+
+DATABASE_PATH = "./db_Operator.sqlite" 
+
+{% endif %}
+
+
+{% if SELERY_BROKER_URL is defined %}
+SELERY_BROKER_URL = {{ SELERY_BROKER_URL }}
+{% else %}
+SELERY_BROKER_URL = 'redis://localhost:6379/1'
+{% endif %}
+
+{% if SELERY_RESULT_BACKEND is defined %}
+SELERY_RESULT_BACKEND = {{ SELERY_RESULT_BACKEND }}
+{% else %}
+SELERY_RESULT_BACKEND = 'redis://localhost:6379/1'
+{% endif %}
+
+
+{% if CERT_PATH is defined %}
+CERT_PATH = {{ CERT_PATH }}
+{% else %}
+CERT_PATH = "./service_key.jwk"
+{% endif %}
+
+{% if CERT_KEY_PATH is defined %}
+CERT_KEY_PATH = {{ CERT_KEY_PATH }}
+{% else %}
+CERT_KEY_PATH = "./service_key.jwk"
+{% endif %}
+
+{% if CERT_PASSWORD_PATH is defined %}
+CERT_PASSWORD_PATH = {{ CERT_PASSWORD_PATH }}
+{% else %}
+CERT_PASSWORD_PATH = "./cert_pw"
+{% endif %}
+
+
+
+{% if SERVICE_URL is defined %}
+SERVICE_URL = {{ SERVICE_URL }}
+{% else %}
+SERVICE_URL = "http://localhost:2000"
+{% endif %}
+
+{% if OPERATOR_URL is defined %}
+OPERATOR_URL = {{ OPERATOR_URL }}
+{% else %}
+OPERATOR_URL = "http://localhost:5000"
+{% endif %}
+
+{% if SERVICE_ID is defined %}
+SERVICE_ID = {{ SERVICE_ID }}
+{% else %}
+SERVICE_ID = "SRVMGMNT-CHANGE_ME"
+{% endif %}
+
+{% if SERVICE_ROOT_PATH is defined %}
+SERVICE_ROOT_PATH = {{ SERVICE_ROOT_PATH }}
+{% else %}
+SERVICE_ROOT_PATH = "/api/1.2"
+{% endif %}
+
+{% if SERVICE_CR_PATH is defined %}
+SERVICE_CR_PATH = {{ SERVICE_CR_PATH }}
+{% else %}
+SERVICE_CR_PATH = "/cr"
+{% endif %}
+
+{% if SERVICE_SLR_PATH is defined %}
+SERVICE_SLR_PATH = {{ SERVICE_SLR_PATH }}
+{% else %}
+SERVICE_SLR_PATH = "/slr"
+{% endif %}
+
+{% if DEBUG_MODE is defined %}
+DEBUG_MODE = {{ DEBUG_MODE }}
+{% else %}
+DEBUG_MODE = True
+{% endif %}
+
+CELERY_QUEUES = (
+    Queue('srv_queue', Exchange('srv_queue'), routing_key='srv_queue'),
+)
+
+CELERY_DEFAULT_QUEUE = 'srv_queue'
+
+CELERY_ROUTES = {
+    'get_AuthToken': {'queue': 'srv_queue', 'routing_key': "srv_queue"}
+}

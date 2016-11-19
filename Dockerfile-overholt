@@ -1,0 +1,105 @@
+FROM python:2.7
+MAINTAINER hjhsalo <hjhsalo@gmail.com>
+
+# NOTE: Baseimage python:2.7 already contains latest pip
+
+# TODO: Compile cryptography (and everything else pip related) elsewhere and 
+# get rid of "build-essential libssl-dev libffi-dev python-dev"
+# Maybe according to these instructions: 
+# https://glyph.twistedmatrix.com/2015/03/docker-deploy-double-dutch.html
+
+# TODO: Double check and think about the order of commands. Should application 
+# specific stuff be moved to the end of the file? 
+# What are actually application specific? etc.
+
+# TODO: Have brainstorming session on how to properly setup EXPOSE ports, hosts, etc.
+# Now it is difficult to come up with sensible defaults.
+# Remember to check out what Docker Compose offers.
+
+# TODO: Make a new user and usergroup.
+# Now everything including the ENTRYPOINT is being run as root which is bad
+# practise and for example uWSGI complains about this.
+
+###
+# Install 
+# Specific structure where a single RUN is used to execute everything.
+# Based on Docker Best practices -document. To force cache busting.
+# https://docs.docker.com/engine/userguide/eng-image/dockerfile_best-practices/#/apt-get
+# NOTE: python-mysql.connector is MyData Account specific dependency.
+RUN apt-get update && apt-get install -y \
+    build-essential \
+	libffi-dev \
+    libssl-dev \
+	python-dev \
+	celeryd \
+ && rm -rf /var/lib/apt/lists/*
+
+
+### 
+# Create a installation directory into the container
+ARG APP_INSTALL_PATH=/mydata-sdk-components
+ENV APP_INSTALL_PATH ${APP_INSTALL_PATH:-/mydata-sdk-components}
+
+RUN mkdir -p $APP_INSTALL_PATH
+
+# Change current directory inside the container / image to this path.
+WORKDIR $APP_INSTALL_PATH
+
+ARG OVERHOLT_APPLICATION_PATH=/
+ENV OVERHOLT_APPLICATION_PATH ${OVERHOLT_APPLICATION_PATH:-/}
+
+
+###
+# Install application specific Python-dependencies.
+
+# NOTE: If you have multiple Dockerfile steps that use different files from 
+# your context, COPY them individually, rather than all at once. This will 
+# ensure that each step’s build cache is only invalidated (forcing the step 
+# to be re-run) if the specifically required files change.
+# https://docs.docker.com/engine/userguide/eng-image/dockerfile_best-practices/#/add-or-copy
+COPY $OVERHOLT_APPLICATION_PATH/requirements.txt /tmp/
+RUN pip install --requirement /tmp/requirements.txt
+
+# NOTE: j2cli is needed to preprocess config files based on values 
+# environment variables
+# https://github.com/kolypto/j2cli
+# https://tryolabs.com/blog/2015/03/26/configurable-docker-containers-for-multiple-environments/
+RUN pip install j2cli
+
+# Copy everything (including previously copied filed and folders) from directory
+# where Overholt -application is located to current WORKDIR inside container.
+# Remember that <src> must be inside the context of the build:
+# http://serverfault.com/a/666154
+COPY .$OVERHOLT_APPLICATION_PATH .$OVERHOLT_APPLICATION_PATH
+
+
+#### These will probably be removed when we start using uwsgi for all python applications
+# Install a init-system in order to avoid python processes to return 137 (in response to SIGKILL)
+#RUN apt-get update && apt-get install -y \
+#    curl \
+# && rm -rf /var/lib/apt/lists/*
+
+ENV DUMB_INIT_VERSION v1.1.3
+ENV DUMB_INIT_WOVERSION 1.1.3
+RUN curl -SL https://github.com/Yelp/dumb-init/releases/download/${DUMB_INIT_VERSION}/dumb-init_${DUMB_INIT_WOVERSION}_amd64.deb \
+    -o dumb-init_${DUMB_INIT_WOVERSION}_amd64.deb \
+    && dpkg -i dumb-init_*.deb
+
+###
+# Configure and run the application using entrypoint.sh.
+# NOTE: Content of CMD are the default parameters passed to entrypoint.sh.
+# These can be overwritten on "docker run <image> <parameters_that_replace_CMD>"
+# https://docs.docker.com/engine/userguide/eng-image/dockerfile_best-practices/#/entrypoint
+COPY ./docker-entrypoint-overholt.sh /
+
+#ENTRYPOINT ["/docker-entrypoint-overholt.sh"]
+
+#### These will probably be removed when we start using uwsgi for all python applications
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
+
+WORKDIR $APP_INSTALL_PATH$OVERHOLT_APPLICATION_PATH
+
+# NOTE: Maybe this should be replaced with something that doesn't run anything 
+# and the command below should go to compose.yml ??
+#CMD ["sh", "-c", "python $APP_INSTALL_PATH${OVERHOLT_APPLICATION_PATH}/wsgi.py"]
+CMD ["/docker-entrypoint-overholt.sh", "sh", "-c", "python $APP_INSTALL_PATH${OVERHOLT_APPLICATION_PATH}/wsgi.py"]

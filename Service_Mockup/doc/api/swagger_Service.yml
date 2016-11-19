@@ -27,7 +27,7 @@ paths:
         200:
           description: "Returns 200 OK or Error Message"
         500:
-          description: "Internal server error"
+          description: "Internal server error. The actual status code and content of the error message may vary depending on error occurred."
           schema:
             $ref: "#/definitions/errors"
   /login:
@@ -52,7 +52,7 @@ paths:
         200:
           description: "Returns 200 OK or Error message"
         500:
-          description: "Internal server error"
+          description: "Internal server error. The actual status code and content of the error message may vary depending on error occurred."
           schema:
             $ref: "#/definitions/errors"
   /store_slr:
@@ -76,7 +76,7 @@ paths:
         200:
           description: "Returns 200 OK or Error message"
         500:
-          description: "Internal server error"
+          description: "Internal server error. The actual status code and content of the error message may vary depending on error occurred."
           schema:
             $ref: "#/definitions/errors"
 definitions:

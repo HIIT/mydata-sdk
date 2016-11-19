@@ -136,7 +136,7 @@ class ServiceLinkSign(Resource):
 
         # Sign SLR
         try:
-            slr_signed = sign_slr(account_id=account_id, slr_payload=slr_payload, endpoint=str(endpoint))
+            slr_signed_dict = sign_slr(account_id=account_id, slr_payload=slr_payload, endpoint=str(endpoint))
         except Exception as exp:
             logger.error("Could not sign SLR")
             logger.debug("Could not sign SLR: " + repr(exp))
@@ -150,7 +150,7 @@ class ServiceLinkSign(Resource):
             response_data['data']['slr'] = {}
             response_data['data']['slr']['type'] = "ServiceLinkRecord"
             response_data['data']['slr']['attributes'] = {}
-            response_data['data']['slr']['attributes']['slr'] = json.loads(slr_signed)
+            response_data['data']['slr']['attributes']['slr'] = slr_signed_dict
             response_data['data']['surrogate_id'] = surrogate_id
         except Exception as exp:
             logger.error('Could not prepare response data: ' + repr(exp))
@@ -225,7 +225,7 @@ class ServiceLinkVerify(Resource):
 
         # Decode slr payload
         try:
-            print (json.dumps(json_data))
+            #print (json.dumps(json_data))
             slr_payload_encoded = slr['payload']
             slr_payload_encoded += '=' * (-len(slr_payload_encoded) % 4)  # Fix incorrect padding, base64
             slr_payload_decoded = b64decode(slr_payload_encoded).replace('\\', '').replace('"{', '{').replace('}"', '}')
@@ -301,6 +301,14 @@ class ServiceLinkVerify(Resource):
         else:
             logger.debug("Got prev_ssr_id: " + str(prev_ssr_id))
 
+        # Get iat
+        try:
+            ssr_iat = int(ssr_payload['iat'])
+        except Exception as exp:
+            raise ApiError(code=400, title="Could not fetch iat from ssr_payload", detail=repr(exp), source=endpoint)
+        else:
+            logger.debug("Got iat: " + str(prev_ssr_id))
+
         #
         # Get code
         try:
@@ -331,7 +339,7 @@ class ServiceLinkVerify(Resource):
 
         # Sign Ssr
         try:
-            ssr_signed, ssr_iat = sign_ssr(account_id=account_id, ssr_payload=ssr_payload, endpoint=str(endpoint))
+            ssr_signed = sign_ssr(account_id=account_id, ssr_payload=ssr_payload, endpoint=str(endpoint))
         except Exception as exp:
             logger.error("Could not sign Ssr")
             logger.debug("Could not sign Ssr: " + repr(exp))
@@ -342,7 +350,7 @@ class ServiceLinkVerify(Resource):
         logger.info("Storing Service Link Record and Service Link Status Record")
         try:
             slr_entry = ServiceLinkRecord(
-                service_link_record=json.dumps(slr),
+                service_link_record=slr,
                 service_link_record_id=slr_id,
                 service_id=service_id,
                 surrogate_id=surrogate_id,
@@ -367,14 +375,15 @@ class ServiceLinkVerify(Resource):
             raise ApiError(code=500, title="Failed to create Service Link Status Record object", detail=repr(exp), source=endpoint)
 
         try:
-            db_meta = store_slr_and_ssr(slr_entry=slr_entry, ssr_entry=ssr_entry, endpoint=str(endpoint))
+            stored_slr_entry, stored_ssr_entry = store_slr_and_ssr(slr_entry=slr_entry, ssr_entry=ssr_entry, endpoint=str(endpoint))
         except Exception as exp:
             logger.error("Could not store Service Link Record and Service Link Status Record")
             logger.debug("Could not store SLR and Ssr: " + repr(exp))
             raise
         else:
             logger.info("Stored Service Link Record and Service Link Status Record")
-            logger.debug("DB Meta: " + json.dumps(db_meta))
+            logger.debug("stored_slr_entry: " + stored_slr_entry.log_entry)
+            logger.debug("stored_ssr_entry: " + stored_ssr_entry.log_entry)
 
         # Response data container
         try:
@@ -383,15 +392,9 @@ class ServiceLinkVerify(Resource):
 
             response_data['data'] = {}
 
-            response_data['data']['slr'] = {}
-            response_data['data']['slr']['type'] = "ServiceLinkRecord"
-            response_data['data']['slr']['attributes'] = {}
-            response_data['data']['slr']['attributes']['slr'] = slr
+            response_data['data']['slr'] = stored_slr_entry.to_record_dict
 
-            response_data['data']['ssr'] = {}
-            response_data['data']['ssr']['type'] = "ServiceLinkStatusRecord"
-            response_data['data']['ssr']['attributes'] = {}
-            response_data['data']['ssr']['attributes']['ssr'] = json.loads(ssr_signed)
+            response_data['data']['ssr'] = stored_ssr_entry.to_record_dict
 
             response_data['data']['surrogate_id'] = surrogate_id
         except Exception as exp:

@@ -51,15 +51,18 @@ db = MySQL(app)
 # =========================================
 api = Api(app, prefix=app.config["URL_PREFIX"])
 
+
 @app.before_request
 def new_request():
     print("New Request")
     print("############")
 
+
 @app.errorhandler(404)
 def not_found(error):
-    # When file not found, respon with 403
-    return make_response(('FORBIDDEN', 403))
+    not_found_error = ApiError(code=404, title="Not Found", detail="Endpoint not found", status="NotFound")
+    error_dict = not_found_error.to_dict()
+    return make_json_response(errors=error_dict, status_code=str(error_dict['code']))
 
 
 @app.errorhandler(ApiError)

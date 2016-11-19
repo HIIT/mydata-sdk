@@ -16,22 +16,25 @@ from marshmallow import Schema, fields
 from marshmallow.validate import Equal, OneOf
 
 
+STATUS_LIST = ["Active", "Removed"]  # List that contains status entries
+
+
 class SlrAttributes(Schema):
     version = fields.Str(required=True)
     link_id = fields.Str(required=True)
     operator_id = fields.Str(required=True)
     service_id = fields.Str(required=True)
     surrogate_id = fields.Str(required=True)
-    token_key = fields.Dict(required=True)
     operator_key = fields.Dict(required=True)
     cr_keys = fields.Str(required=True)
-    created = fields.Str(required=True)
+    iat = fields.Int(required=True)
 
 
 class SurrogateAttributes(Schema):
     surrogate_id = fields.Str(required=True)
     service_id = fields.Str(required=True)
     account_id = fields.Str(required=True)
+
 
 class SlrContent(Schema):
     type = fields.Str(required=True, validate=Equal("ServiceLinkRecord"))
@@ -56,10 +59,10 @@ class NewServiceLink(Schema):
 ############
 class SsrAttributes(Schema):
     record_id = fields.Str(required=True)
-    account_id = fields.Str(required=True)
+    surrogate_id = fields.Str(required=True)
     slr_id = fields.Str(required=True)
-    sl_status = fields.Str(required=True, validate=OneOf(["Active", "Removed"]))
-    iat = fields.Str(required=True)
+    sl_status = fields.Str(required=True, validate=OneOf(STATUS_LIST))
+    iat = fields.Int(required=True)
     prev_record_id = fields.Str(required=True)
 
 

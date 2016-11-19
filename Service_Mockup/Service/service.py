@@ -3,15 +3,14 @@ __author__ = 'alpaloma'
 import logging
 import time
 from json import loads
-from requests import post
-from sqlite3 import OperationalError, IntegrityError
 
-import db_handler as db_handler
 from DetailedHTTPException import DetailedHTTPException, error_handler
 from flask import request, Blueprint, current_app
 from flask_cors import CORS
 from flask_restful import Resource, Api
+from helpers import Helpers
 from jwcrypto import jwk
+from requests import post
 
 debug_log = logging.getLogger("debug")
 
@@ -63,80 +62,18 @@ def timeme(method):
     return wrapper
 
 
-def storeJSON(DictionaryToStore):
-    db = db_handler.get_db()
-    try:
-        db_handler.init_db(db)
-    except OperationalError:
-        pass
-
-    debug_log.info(DictionaryToStore)
-
-    for key in DictionaryToStore:
-        debug_log.info(key)
-        # codes = {"jsons": {}}
-        # codes = {"jsons": {}}
-        try:
-            db.execute("INSERT INTO storage (ID,json) \
-                VALUES (?, ?)", [key, dumps(DictionaryToStore[key])])
-            db.commit()
-        except IntegrityError as e:
-            db.execute("UPDATE storage SET json=? WHERE ID=? ;", [dumps(DictionaryToStore[key]), key])
-            db.commit()
-
-
-def storeCodeUser(DictionaryToStore):
-    # {"code": "user_id"}
-    db = db_handler.get_db()
-    try:
-        db_handler.init_db(db)
-    except OperationalError:
-        pass
-
-    debug_log.info(DictionaryToStore)
-
-    for key in DictionaryToStore:
-        debug_log.info(key)
-        db.execute("INSERT INTO code_and_user_mapping (code, user_id) \
-            VALUES (?, ?)", [key, dumps(DictionaryToStore[key])])
-        db.commit()
-
-
-def get_user_id_with_code(code):
-    db = db_handler.get_db()
-    for code_row in db_handler.query_db("select * from code_and_user_mapping where code = ?;", [code]):
-        user_from_db = code_row["user_id"]
-        return user_from_db
-    raise DetailedHTTPException(status=500,
-                                detail={"msg": "Unable to link code to user_id in database", "detail": {"code": code}},
-                                title="Failed to link code to user_id")
-    # Letting world burn if user was not in db. Fail fast, fail hard.
-
-
-def storeSurrogateJSON(DictionaryToStore):
-    db = db_handler.get_db()
-    try:
-        db_handler.init_db(db)
-    except OperationalError:
-        pass
-
-    debug_log.info(DictionaryToStore)
-
-    for key in DictionaryToStore:
-        debug_log.info(key)
-        db.execute("INSERT INTO surrogate_and_user_mapping (user_id, surrogate_id) \
-            VALUES (?, ?)", [key, dumps(DictionaryToStore[key])])
-        db.commit()
-
-
 class UserLogin(Resource):
+    def __init__(self):
+        super(UserLogin, self).__init__()
+        self.helpers = Helpers(current_app.config)
+
     @timeme
     @error_handler
     def post(self):
         debug_log.info(dumps(request.json, indent=2))
         user_id = request.json["user_id"]
         code = request.json["code"]
-        storeCodeUser({code: user_id})
+        self.helpers.storeCodeUser({code: user_id})
 
         debug_log.info("User logged in with id ({})".format(format(user_id)))
         endpoint = "/api/1.2/slr/auth"
@@ -156,25 +93,34 @@ from json import dumps
 
 
 class RegisterSur(Resource):
+    def __init__(self):
+        super(RegisterSur, self).__init__()
+        self.db_path = current_app.config["DATABASE_PATH"]
+        self.helpers = Helpers(current_app.config)
     @timeme
     @error_handler
     def post(self):
         try:  # Remove this check once debugging is done. TODO
-            user_id = get_user_id_with_code(request.json["code"])
+            user_id = self.helpers.get_user_id_with_code(request.json["code"])
             debug_log.info("We got surrogate_id {} for user_id {}".format(request.json["surrogate_id"], user_id))
             debug_log.info(dumps(request.json, indent=2))
-            storeSurrogateJSON({user_id: request.json})
+            self.helpers.storeSurrogateJSON({user_id: request.json})
         except Exception as e:
             pass
 
 
 class StoreSlr(Resource):
+    def __init__(self):
+        super(StoreSlr, self).__init__()
+        self.db_path = current_app.config["DATABASE_PATH"]
+        self.helpers = Helpers(current_app.config)
+
     @timeme
     @error_handler
     def post(self):
         debug_log.info(dumps(request.json, indent=2))
         store = request.json
-        storeJSON({store["data"]["surrogate_id"]: store})
+        self.helpers.storeJSON({store["data"]["surrogate_id"]: store})
 
 
 api.add_resource(UserLogin, '/login')

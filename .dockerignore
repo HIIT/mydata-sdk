@@ -1,0 +1,5 @@
+doc
+Dockerfile*
+nginx.conf
+uwsgi.ini
+docker-compose.yml

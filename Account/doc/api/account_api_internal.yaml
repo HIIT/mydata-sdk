@@ -4,7 +4,7 @@ info:
   title: 'Digital Health Revolution - MyData Account'
   description:
     ' #### MyData-SDK - MyData Account API - Internal '
-  version: '1.2'
+  version: '1.2.1'
   contact:
     url: 'https://github.com/HIIT/mydata-stack'
   license:
@@ -303,6 +303,134 @@ paths:
             $ref: '#/definitions/errors'
 
 
+  /consent/{cr_id}/status/last/:
+    get:
+      security:
+        - internalApiKeyAuth: []
+      description: "Get last Status Record of Consent"
+
+      parameters:
+        - name: cr_id
+          in: path
+          type: string
+          description: "Consent Record ID"
+          required: true
+
+      tags:
+        - Consent
+        - Authorizationtoken
+
+      responses:
+        '200':
+          description: 'Last Status Record of Consent'
+          schema:
+            $ref: '#/definitions/ConsentStatusRecordResponse'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/errors'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/errors'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/errors'
+        '500':
+          description: Internal Server error
+          schema:
+            $ref: '#/definitions/errors'
+
+
+  /consent/{cr_id}/status/:
+    get:
+      security:
+        - internalApiKeyAuth: []
+      description: "Get missing Consent Status Records"
+
+      parameters:
+        - name: cr_id
+          in: path
+          type: string
+          description: "Consent Record ID"
+          required: true
+        - name: csr_id
+          in: query
+          type: string
+          description: "Last valid Consent Status Record ID"
+          required: true
+
+      tags:
+        - Consent
+        - Status
+
+      responses:
+        '200':
+          description: 'Array of Consent Status Record objects'
+          schema:
+            $ref: '#/definitions/MissingConsentStatusRecordResponse'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/errors'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/errors'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/errors'
+        '500':
+          description: Internal Server error
+          schema:
+            $ref: '#/definitions/errors'
+
+    post:
+      security:
+        - internalApiKeyAuth: []
+      description: "Issue new status"
+
+      parameters:
+        - name: cr_id
+          in: path
+          type: string
+          description: "Consent Record ID"
+          required: true
+        - name: csr_payload
+          in: body
+          description: "Consent Record payload"
+          required: true
+          schema:
+            $ref: '#/definitions/newConsentStatus'
+
+      tags:
+        - Consent
+        - Status
+
+      responses:
+        '200':
+          description: 'New Consent Status Record'
+          schema:
+            $ref: '#/definitions/ConsentStatusRecordResponse'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/errors'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/errors'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/errors'
+        '500':
+          description: Internal Server error
+          schema:
+            $ref: '#/definitions/errors'
+
 
 definitions:
 
@@ -324,25 +452,23 @@ definitions:
                   $ref: '#/definitions/Slr'
 
   errors:
-    type: array
-    items:
-      type: object
-      properties:
-        status:
-          type: string
-          description: HTTP status code as string value.
-        code:
-          type: integer
-          description: HTTP status code
-        title:
-          type: string
-          description: Title of error message.
-        detail:
-          type: string
-          description: Detailed error message.
-        source:
-          type: string
-          description: Source URI
+    type: object
+    properties:
+      status:
+        type: string
+        description: HTTP status code as string value.
+      code:
+        type: integer
+        description: HTTP status code
+      title:
+        type: string
+        description: Title of error message.
+      detail:
+        type: string
+        description: Detailed error message.
+      source:
+        type: string
+        description: Source URI
 
   apiKeyResponse:
     type: object
@@ -377,6 +503,9 @@ definitions:
       type:
         type: string
         description: "Resource type: 'ServiceLinkRecord'"
+      id:
+        type: string
+        description: "ID of resource"
       attributes:
         type: object
         properties:
@@ -390,6 +519,9 @@ definitions:
       type:
         type: string
         description: "Resource type: 'ServiceLinkStatusRecord'"
+      id:
+        type: string
+        description: "ID of resource"
       attributes:
         type: object
         properties:
@@ -516,6 +648,9 @@ definitions:
       type:
         type: string
         description: "Resource type: 'ConsentRecord'"
+      id:
+        type: string
+        description: "ID of resource"
       attributes:
         type: object
         properties:
@@ -529,6 +664,9 @@ definitions:
       type:
         type: string
         description: "Resource type: 'ConsentStatusRecord'"
+      id:
+        type: string
+        description: "ID of resource"
       attributes:
         type: object
         properties:
@@ -577,3 +715,19 @@ definitions:
                   $ref: '#/definitions/ConsentRecord'
               consentStatusRecord:
                 $ref: '#/definitions/ConsentStatusRecord'
+
+
+  ConsentStatusRecordResponse:
+    type: object
+    properties:
+      data:
+       $ref: '#/definitions/ConsentStatusRecord'
+
+
+  MissingConsentStatusRecordResponse:
+    type: object
+    properties:
+      data:
+       type: array
+       items:
+        $ref: '#/definitions/ConsentStatusRecord'

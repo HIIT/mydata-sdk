@@ -43,5 +43,5 @@ You can find configurable settings in /instance/settings.py
 
     cd Operator_Components/
     source virtual_env_2_7/bin/activate
-    nohup celery -A tasks worker > op_celery.log &
+    nohup celery -A op_tasks worker > op_celery.log &
     nohup python wsgi.py > op_flask.log &

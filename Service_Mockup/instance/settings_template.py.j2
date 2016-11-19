@@ -1,0 +1,79 @@
+# -*- coding: utf-8 -*-
+timeout = 8
+KEYSIZE = 512
+{% if SERVICE_MGMNT_URL is defined %}
+SERVICE_MGMNT_URL = {{ SERVICE_MGMNT_URL }}
+{% else %}
+SERVICE_MGMNT_URL = "http://localhost:7000"
+{% endif %}
+
+
+{% if DATABASE_PATH is defined %}
+DATABASE_PATH = {{ DATABASE_PATH }}
+{% else %}
+
+DATABASE_PATH = "./db_Mockup.sqlite"
+{% endif %}
+
+
+# Name of host to connect to. Default: use the local host via a UNIX socket (where applicable)
+{% if MYSQL_HOST is defined %}
+MYSQL_HOST = {{ MYSQL_HOST }}
+{% else %}
+MYSQL_HOST = 'localhost'
+{% endif %}
+
+ # User to authenticate as. Default: current effective user.
+{% if MYSQL_USER is defined %}
+MYSQL_USER = {{ MYSQL_USER }}
+{% else %}
+MYSQL_USER = 'serviceMockup'
+{% endif %}
+
+# Password to authenticate with. Default: no password.
+{% if MYSQL_PASSWORD is defined %}
+MYSQL_PASSWORD = {{ MYSQL_PASSWORD }}
+{% else %}
+MYSQL_PASSWORD = 'MynorcA'
+{% endif %}
+
+# Database to use. Default: no default database.
+{% if MYSQL_DB is defined %}
+MYSQL_DB = {{ MYSQL_DB }}
+{% else %}
+MYSQL_DB = 'db_Service_Mockup'
+{% endif %}
+
+# TCP port of MySQL server. Default: 3306.
+{% if MYSQL_PORT is defined %}
+MYSQL_PORT = {{ MYSQL_PORT }}
+{% else %}
+MYSQL_PORT = 3306
+{% endif %}
+
+
+{% if CERT_PATH is defined %}
+CERT_PATH = {{ CERT_PATH }}
+{% else %}
+CERT_PATH = "./service_key.jwk"
+{% endif %}
+
+{% if CERT_KEY_PATH is defined %}
+CERT_KEY_PATH = {{ CERT_KEY_PATH }}
+{% else %}
+CERT_KEY_PATH = "./service_key.jwk"
+{% endif %}
+
+{% if CERT_PASSWORD_PATH is defined %}
+CERT_PASSWORD_PATH = {{ CERT_PASSWORD_PATH }}
+{% else %}
+CERT_PASSWORD_PATH = "./cert_pw"
+{% endif %}
+
+
+
+{% if DEBUG_MODE is defined %}
+DEBUG_MODE = {{ DEBUG_MODE }}
+{% else %}
+DEBUG_MODE = True
+{% endif %}

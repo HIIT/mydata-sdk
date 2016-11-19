@@ -1,0 +1,187 @@
+# -*- coding: utf-8 -*-
+from kombu import Exchange, Queue
+
+TIMEOUT = 8
+KEYSIZE = 512
+
+{% if UID is defined %}
+UID = {{ UID }}
+{% else %}
+UID = 'Operator112'
+{% endif %}
+
+
+{% if SERVICE_REGISTRY_SEARCH_DOMAIN is defined %}
+SERVICE_REGISTRY_SEARCH_DOMAIN = {{ SERVICE_REGISTRY_SEARCH_DOMAIN }}
+{% else %}
+SERVICE_REGISTRY_SEARCH_DOMAIN = "http://178.62.229.148:8081"
+{% endif %}
+
+{% if SERVICE_REGISTRY_SEARCH_ENDPOINT is defined %}
+SERVICE_REGISTRY_SEARCH_ENDPOINT = {{ SERVICE_REGISTRY_SEARCH_ENDPOINT }}
+{% else %}
+SERVICE_REGISTRY_SEARCH_ENDPOINT = "/api/v1/services/"
+{% endif %}
+
+
+{% if NOT_AFTER_INTERVAL is defined %}
+NOT_AFTER_INTERVAL = {{ NOT_AFTER_INTERVAL }}
+{% else %}
+NOT_AFTER_INTERVAL = 2592000 # 30 days in seconds.
+{% endif %}
+
+# Name of host to connect to. Default: use the local host via a UNIX socket (where applicable)
+{% if MYSQL_HOST is defined %}
+MYSQL_HOST = {{ MYSQL_HOST }}
+{% else %}
+MYSQL_HOST = 'localhost'
+{% endif %}
+
+ # User to authenticate as. Default: current effective user.
+{% if MYSQL_USER is defined %}
+MYSQL_USER = {{ MYSQL_USER }}
+{% else %}
+MYSQL_USER = 'operator'
+{% endif %}
+
+# Password to authenticate with. Default: no password.
+{% if MYSQL_PASSWORD is defined %}
+MYSQL_PASSWORD = {{ MYSQL_PASSWORD }}
+{% else %}
+MYSQL_PASSWORD = 'MynorcA'
+{% endif %}
+
+# Database to use. Default: no default database.
+{% if MYSQL_DB is defined %}
+MYSQL_DB = {{ MYSQL_DB }}
+{% else %}
+MYSQL_DB = 'MyDataOperator'
+{% endif %}
+
+# TCP port of MySQL server. Default: 3306.
+{% if MYSQL_PORT is defined %}
+MYSQL_PORT = {{ MYSQL_PORT }}
+{% else %}
+MYSQL_PORT = 3306
+{% endif %}
+
+
+
+# TODO give these as parameter to init AccountManagerHandler
+{% if ACCOUNT_MANAGEMENT_URL is defined %}
+ACCOUNT_MANAGEMENT_URL = {{ ACCOUNT_MANAGEMENT_URL }}
+{% else %}
+
+ACCOUNT_MANAGEMENT_URL = "http://myaccount.dy.fi/" 
+
+{% endif %}
+
+{% if ACCOUNT_MANAGEMENT_USER is defined %}
+ACCOUNT_MANAGEMENT_USER = {{ ACCOUNT_MANAGEMENT_USER }}
+{% else %}
+ACCOUNT_MANAGEMENT_USER = "test_sdk"
+{% endif %}
+
+{% if ACCOUNT_MANAGEMENT_PASSWORD is defined %}
+ACCOUNT_MANAGEMENT_PASSWORD = {{ ACCOUNT_MANAGEMENT_PASSWORD }}
+{% else %}
+ACCOUNT_MANAGEMENT_PASSWORD = "test_sdk_pw"
+{% endif %}
+
+
+# Setting to /tmp or other ramdisk makes it faster.
+{% if DATABASE_PATH is defined %}
+DATABASE_PATH = {{ DATABASE_PATH }}
+{% else %}
+
+DATABASE_PATH = "./db_Operator.sqlite" 
+{% endif %}
+
+
+{% if SELERY_BROKER_URL is defined %}
+SELERY_BROKER_URL = {{ SELERY_BROKER_URL }}
+{% else %}
+SELERY_BROKER_URL = 'redis://localhost:6379/0'
+{% endif %}
+
+{% if SELERY_RESULT_BACKEND is defined %}
+SELERY_RESULT_BACKEND = {{ SELERY_RESULT_BACKEND }}
+{% else %}
+SELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+
+{% endif %}
+
+
+{% if CERT_PATH is defined %}
+CERT_PATH = {{ CERT_PATH }}
+{% else %}
+CERT_PATH = "./service_key.jwk"
+{% endif %}
+
+{% if CERT_KEY_PATH is defined %}
+CERT_KEY_PATH = {{ CERT_KEY_PATH }}
+{% else %}
+CERT_KEY_PATH = "./service_key.jwk"
+{% endif %}
+
+{% if CERT_PASSWORD_PATH is defined %}
+CERT_PASSWORD_PATH = {{ CERT_PASSWORD_PATH }}
+{% else %}
+CERT_PASSWORD_PATH = "./cert_pw"
+{% endif %}
+
+
+{% if OPERATOR_URL is defined %}
+OPERATOR_URL = {{ OPERATOR_URL }}
+{% else %}
+OPERATOR_URL = "http://localhost:5000"
+{% endif %}
+
+{% if OPERATOR_UID is defined %}
+OPERATOR_UID = {{ OPERATOR_UID }}
+{% else %}
+OPERATOR_UID = "41e19fcd-1951-455f-9169-a303f990f52d"
+{% endif %}
+
+
+{% if OPERATOR_ROOT_PATH is defined %}
+OPERATOR_ROOT_PATH = {{ OPERATOR_ROOT_PATH }}
+{% else %}
+OPERATOR_ROOT_PATH = "/api/1.2"
+{% endif %}
+
+{% if OPERATOR_CR_PATH is defined %}
+OPERATOR_CR_PATH = {{ OPERATOR_CR_PATH }}
+{% else %}
+OPERATOR_CR_PATH = "/cr"
+{% endif %}
+
+{% if OPERATOR_SLR_PATH is defined %}
+OPERATOR_SLR_PATH = {{ OPERATOR_SLR_PATH }}
+{% else %}
+OPERATOR_SLR_PATH = "/slr"
+{% endif %}
+
+{% if SERVICE_URL is defined %}
+SERVICE_URL = {{ SERVICE_URL }}
+{% else %}
+SERVICE_URL = "http://localhost:7000"
+{% endif %}
+
+{% if DEBUG_MODE is defined %}
+DEBUG_MODE = {{ DEBUG_MODE }}
+{% else %}
+DEBUG_MODE = True
+{% endif %}
+
+
+
+CELERY_QUEUES = (
+    Queue('op_queue', Exchange('op_queue'), routing_key='op_queue'),
+)
+
+CELERY_DEFAULT_QUEUE = 'op_queue'
+
+CELERY_ROUTES = {
+    'CR_Installer': {'queue': 'op_queue','routing_key': "op_queue"},
+}

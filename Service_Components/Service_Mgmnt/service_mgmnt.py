@@ -52,6 +52,7 @@ class GenCode(Resource):
 
     @error_handler
     def get(self):
+        code_storage = None
         try:
             sq.task("Generate code")
             code = str(guid())
@@ -61,6 +62,8 @@ class GenCode(Resource):
             sq.reply_to("Operator_Components Mgmnt", "Returning code")
             return {'code': code}
         except Exception as e:
+            if code_storage is None:
+                code_storage = "code json structure is broken."
             raise DetailedHTTPException(exception=e,
                                         detail={"msg": "Most likely storing code failed.", "code_json": code_storage},
                                         title="Failure in GenCode endpoint",
@@ -72,35 +75,18 @@ class UserAuthenticated(Resource):
         super(UserAuthenticated, self).__init__()
         keysize = current_app.config["KEYSIZE"]
         cert_key_path = current_app.config["CERT_KEY_PATH"]
-        Service_ID = "SRVMGNT-RSA-{}".format(keysize)
-        gen = {"generate": "EC", "cvr": "P-256", "kid": Service_ID}
-        gen2 = {"generate": "EC", "cvr": "P-256", "kid": Service_ID}
-
-        gen3 = {"generate": "RSA", "size": keysize, "kid": Service_ID}
-        self.service_key = jwk.JWK(**gen3)
-        try:
-            with open(cert_key_path, "r") as cert_file:
-                service_key2 = jwk.JWK(**loads(load(cert_file)))
-                self.service_key = service_key2
-        except Exception as e:
-            debug_log.error(e)
-            with open(cert_key_path, "w+") as cert_file:
-                dump(self.service_key.export(), cert_file, indent=2)
-        service_cert = self.service_key.export_public()
-        self.token_key = self.service_key
-
-        templ = {Service_ID: {"cr_keys": loads(self.token_key.export_public())}}
-        protti = {"alg": "RS256"}
-        headeri = {"kid": Service_ID, "jwk": loads(self.service_key.export_public())}
+        self.helpers = Helpers(current_app.config)
+        self.service_key = self.helpers.get_key()
 
         self.service_url = current_app.config["SERVICE_URL"]
         self.operator_url = current_app.config["OPERATOR_URL"]
-        self.helpers = Helpers(current_app.config)
+
 
     @timeme
     @error_handler
     def post(self):
         try:
+            debug_log.info("UserAuthenticated class, method post got json:")
             debug_log.info(request.json)
             user_id = request.json["user_id"]
             code = request.json["code"]
@@ -111,9 +97,9 @@ class UserAuthenticated(Resource):
             sq.task("Link code to generated surrogate_id")
             self.helpers.add_surrogate_id_to_code(request.json["code"], surrogate_id)
             data = {"surrogate_id": surrogate_id, "code": request.json["code"],
-                    "token_key": loads(self.service_key.export_public())}
+                    "token_key": self.service_key["pub"]}
 
-            sq.send_to("Service_Components", "Send surrogate_id to Service_Components")
+            sq.send_to("Service_Components", "Send surrogate_id to Service_Mockup")
             endpoint = "/api/1.2/slr/link"
             content_json = {"code": code, "surrogate_id": surrogate_id}
             result_service = post("{}{}".format(self.service_url, endpoint), json=content_json)
@@ -152,7 +138,7 @@ class SignInRedirector(Resource):
 
     @error_handler
     def post(self):
-
+        debug_log.info("SignInRedisrector class, method post got json:")
         debug_log.info(request.json)
         code = request.json
 
@@ -186,6 +172,7 @@ def verifyJWS(json_JWS):
             jws.verify(sign_key)
             return True
         except Exception as e:
+            debug_log.info("JWS verification failed with:")
             debug_log.info(repr(e))
 
     try:
@@ -208,6 +195,7 @@ def verifyJWS(json_JWS):
                     return True
         return False
     except Exception as e:
+        debug_log.info("JWS verification failed with:")
         debug_log.info("M:", repr(e))
         return False
 
@@ -228,37 +216,25 @@ def header_fix(malformed_dictionary):  # We do not check if its malformed, we ex
 class StoreSLR(Resource):
     def __init__(self):
         super(StoreSLR, self).__init__()
-        keysize = current_app.config["KEYSIZE"]
-        cert_key_path = current_app.config["CERT_KEY_PATH"]
-        Service_ID = "SRVMGNT-RSA-{}".format(keysize)
-        gen = {"generate": "EC", "cvr": "P-256", "kid": Service_ID}
-        gen2 = {"generate": "EC", "cvr": "P-256", "kid": Service_ID}
+        config = current_app.config
+        keysize = config["KEYSIZE"]
+        cert_key_path = config["CERT_KEY_PATH"]
+        self.helpers = Helpers(config)
+        self.service_key = self.helpers.get_key()
 
-        gen3 = {"generate": "RSA", "size": keysize, "kid": Service_ID}
-        self.service_key = jwk.JWK(**gen3)
-        try:
-            with open(cert_key_path, "r") as cert_file:
-                service_key2 = jwk.JWK(**loads(load(cert_file)))
-                self.service_key = service_key2
-        except Exception as e:
-            debug_log.error(e)
-            with open(cert_key_path, "w+") as cert_file:
-                dump(self.service_key.export(), cert_file, indent=2)
-        service_cert = self.service_key.export_public()
-        self.token_key = self.service_key  #
 
-        templ = {Service_ID: {"cr_keys": loads(self.token_key.export_public())}}
-        self.protti = {"alg": "RS256"}
-        self.headeri = {"kid": Service_ID, "jwk": loads(self.service_key.export_public())}
+        self.protti = self.service_key["prot"]
+        self.headeri = self.service_key["header"]
 
-        self.service_url = current_app.config["SERVICE_URL"]
-        self.operator_url = current_app.config["OPERATOR_URL"]
-        self.helpers = Helpers(current_app.config)
+        self.service_url = config["SERVICE_URL"]
+        self.operator_url = config["OPERATOR_URL"]
+
 
     @timeme
     @error_handler
     def post(self):
         try:
+            debug_log.info("StoreSLR class method post got json:")
             debug_log.info(dumps(request.json, indent=2))
 
             sq.task("Load SLR to object")
@@ -268,31 +244,32 @@ class StoreSLR(Resource):
             sq.task("Load slr payload as object")
             payload = slr["payload"]
             payload = slr["payload"]
-            debug_log.info("Before Fix:{}".format(payload))
+            debug_log.info("Before padding fix:{}".format(payload))
 
             sq.task("Fix possible incorrect padding in payload")
             payload += '=' * (-len(payload) % 4)  # Fix incorrect padding of base64 string.
-            debug_log.info("After Fix :{}".format(payload))
+            debug_log.info("After padding fix :{}".format(payload))
 
-            sq.task("Decode payload and store it into object")
+            sq.task("Decode SLR payload and store it into object")
             debug_log.info(payload.encode())
             content = decode(payload.encode())
 
             sq.task("Load decoded payload as python dict")
-            payload = loads(
-                loads(content.decode("utf-8")))  # TODO: Figure out why we get str out of loads the first time?
-            debug_log.info(payload)
+            payload = loads(content.decode("utf-8"))
+            debug_log.info("Decoded SLR payload:")
             debug_log.info(type(payload))
+            debug_log.info(dumps(payload, indent=2))
 
-            sq.task("Fetch surrogate_id from decoded payload")
+
+            sq.task("Fetch surrogate_id from decoded SLR payload")
             surrogate_id = payload["surrogate_id"].encode()
-            debug_log.info(content)
 
             sq.task("Load code from json payload")
             code = request.json["data"]["code"].encode()
+            debug_log.info("SLR payload contained code: {}".format(code))
 
             sq.task("Verify surrogate_id and code")
-            debug_log.info("Surrogate was found: {}".format(self.helpers.verifySurrogate(code, surrogate_id)))
+            debug_log.info("Surrogate {} has been verified for code {}.".format(self.helpers.verifySurrogate(code, surrogate_id), code))
 
         except Exception as e:
             raise DetailedHTTPException(title="Verifying Surrogate ID failed",
@@ -302,14 +279,13 @@ class StoreSLR(Resource):
         try:
             sq.task("Create empty JSW object")
             jwssa = jws.JWS()
-            debug_log.info("SLR R:\n", loads(dumps(slr)))
-            debug_log.info(slr["header"]["jwk"])
+            debug_log.info("SLR Received:\n"+(dumps(slr, indent=2)))
 
             sq.task("Deserialize slr to JWS object created before")
             jwssa.deserialize(dumps(slr))
 
-            sq.task("Load JWK used to sign JWS from the slr headers into an object")
-            sign_key = jwk.JWK(**slr["header"]["jwk"])
+            sq.task("Load JWK used to sign JWS from the slr payload's cr_keys field into an object")
+            sign_key = jwk.JWK(**payload["cr_keys"][0])
 
             sq.task("Verify SLR was signed using the key shipped with it")
             debug_log.info(verifyJWS(slr))
@@ -321,12 +297,12 @@ class StoreSLR(Resource):
 
         try:
             sq.task("Fix possible serialization errors in JWS")
-            faulty_JSON = loads(jwssa.serialize(
-                compact=False))  # For some reason serialization messes up "header" from "header": {} to "header": "{}"
+            faulty_JSON = loads(jwssa.serialize(compact=False))  # For some reason serialization messes up "header" from "header": {} to "header": "{}"
             faulty_JSON["header"] = faulty_JSON["header"]
 
             sq.task("Add our signature in the JWS")
-            jwssa.add_signature(self.service_key, alg="RS256", header=dumps(self.headeri), protected=dumps(self.protti))
+            key = jwk.JWK(**self.service_key["key"])
+            jwssa.add_signature(key, header=dumps(self.headeri), protected=dumps(self.protti))
 
             sq.task("Fix possible header errors")
             fixed = header_fix(loads(jwssa.serialize(compact=False)))
@@ -344,17 +320,18 @@ class StoreSLR(Resource):
         sq.send_to("Operator_Components Mgmnt", "Verify SLR(JWS)")
         endpoint = "/api/1.2/slr/verify"
         result = post("{}{}".format(self.operator_url, endpoint), json=req)
-        debug_log.info(result.status_code)
+        debug_log.info("Sent SLR to Operator for verification, results:")
+        debug_log.info("status code:{}\nreason: {}\ncontent: {}".format(result.status_code, result.reason, result.content))
 
         if result.ok:
-            sq.task("Store SLR into db")
+            sq.task("Store following SLR into db")
             store = loads(loads(result.text))
             debug_log.debug(dumps(store, indent=2))
             self.helpers.storeJSON({store["data"]["surrogate_id"]: store})
             endpoint = "/api/1.2/slr/store_slr"
+            debug_log.info("Posting SLR for storage in Service Mockup")
             result = post("{}{}".format(self.service_url, endpoint), json=store)  # Send copy to Service_Components
         else:
-            debug_log.debug(result.reason)
             raise DetailedHTTPException(status=result.status_code,
                                         detail={"msg": "Something went wrong while verifying SLR with Operator_SLR.",
                                                 "Error from Operator_SLR": loads(result.text)},

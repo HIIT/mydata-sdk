@@ -1,86 +1,24 @@
 # -*- coding: utf-8 -*-
 from time import time
-import logging
-from json import dumps, loads
-
-from base64 import urlsafe_b64decode as decode
-
-
-from base64 import urlsafe_b64decode as decode
-from json import loads
-from jwcrypto import jws, jwk
 
 #### Schemas
 source_cr_schema = {
   "$schema": "http://json-schema.org/draft-04/schema#",
   "type": "object",
   "properties": {
-    "extensions": {
-      "type": "object",
-      "properties": {}
-    },
-    "ki_cr": {
-      "type": "object",
-      "properties": {}
-    },
     "common_part": {
       "type": "object",
       "properties": {
-        "issued_at": {
-          "type": "string"
-        },
-        "surrogate_id": {
-          "type": "string"
-        },
-        "subject_id": {
+        "version": {
           "type": "string"
         },
         "cr_id": {
           "type": "string"
         },
-        "version_number": {
+        "surrogate_id": {
           "type": "string"
         },
-        "not_before": {
-          "type": "string"
-        },
-        "slr_id": {
-          "type": "string"
-        },
-        "issued": {
-          "type": "string"
-        },
-        "not_after": {
-          "type": "string"
-        },
-        "rs_id": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "issued_at",
-        "surrogate_id",
-        "subject_id",
-        "cr_id",
-        "version_number",
-        "not_before",
-        "slr_id",
-        "issued",
-        "not_after",
-        "rs_id"
-      ]
-    },
-    "role_specific_part": {
-      "type": "object",
-      "properties": {
-        "auth_token_issuer_key": {
-          "type": "object",
-          "properties": {}
-        },
-        "role": {
-          "type": "string"
-        },
-        "resource_set_description": {
+        "rs_description": {
           "type": "object",
           "properties": {
             "resource_set": {
@@ -94,16 +32,16 @@ source_cr_schema = {
                   "items": {
                     "type": "object",
                     "properties": {
-                      "distribution_id": {
+                      "dataset_id": {
                         "type": "string"
                       },
-                      "dataset_id": {
+                      "distribution_id": {
                         "type": "string"
                       }
                     },
                     "required": [
-                      "distribution_id",
-                      "dataset_id"
+                      "dataset_id",
+                      "distribution_id"
                     ]
                   }
                 }
@@ -117,20 +55,85 @@ source_cr_schema = {
           "required": [
             "resource_set"
           ]
+        },
+        "slr_id": {
+          "type": "string"
+        },
+        "iat": {
+          "type": "integer"
+        },
+        "nbf": {
+          "type": "integer"
+        },
+        "exp": {
+          "type": "integer"
+        },
+        "operator": {
+          "type": "string"
+        },
+        "subject_id": {
+          "type": "string"
+        },
+        "role": {
+          "type": "string"
         }
       },
       "required": [
-        "auth_token_issuer_key",
-        "role",
-        "resource_set_description"
+        "version",
+        "cr_id",
+        "surrogate_id",
+        "rs_description",
+        "slr_id",
+        "iat",
+        "nbf",
+        "exp",
+        "operator",
+        "subject_id",
+        "role"
+      ]
+    },
+    "role_specific_part": {
+      "type": "object",
+      "properties": {
+        "auth_token_issuer_key": {
+          "type": "object",
+          "properties": {}
+        }
+      },
+      "required": [
+        "token_issuer_key"
+      ]
+    },
+    "consent_receipt_part": {
+      "type": "object",
+      "properties": {
+        "ki_cr": {
+          "type": "object",
+          "properties": {}
+        }
+      },
+      "required": [
+        "ki_cr"
+      ]
+    },
+    "extension_part": {
+      "type": "object",
+      "properties": {
+        "extensions": {
+          "type": "object",
+          "properties": {}
+        }
+      },
+      "required": [
+        "extensions"
       ]
     }
   },
   "required": [
-    "extensions",
-    "ki_cr",
     "common_part",
-    "role_specific_part"
+    "role_specific_part",
+    "consent_receipt_part",
+    "extension_part"
   ]
 }
 
@@ -138,85 +141,140 @@ sink_cr_schema = {
   "$schema": "http://json-schema.org/draft-04/schema#",
   "type": "object",
   "properties": {
-    "extensions": {
-      "type": "object",
-      "properties": {}
-    },
-    "ki_cr": {
-      "type": "object",
-      "properties": {}
-    },
     "common_part": {
       "type": "object",
       "properties": {
-        "issued_at": {
-          "type": "string"
-        },
-        "surrogate_id": {
-          "type": "string"
-        },
-        "subject_id": {
+        "version": {
           "type": "string"
         },
         "cr_id": {
           "type": "string"
         },
-        "version_number": {
+        "surrogate_id": {
           "type": "string"
         },
-        "not_before": {
-          "type": "string"
+        "rs_description": {
+          "type": "object",
+          "properties": {
+            "resource_set": {
+              "type": "object",
+              "properties": {
+                "rs_id": {
+                  "type": "string"
+                },
+                "dataset": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "dataset_id": {
+                        "type": "string"
+                      },
+                      "distribution_id": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "dataset_id",
+                      "distribution_id"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "rs_id",
+                "dataset"
+              ]
+            }
+          },
+          "required": [
+            "resource_set"
+          ]
         },
         "slr_id": {
           "type": "string"
         },
-        "issued": {
+        "iat": {
+          "type": "integer"
+        },
+        "nbf": {
+          "type": "integer"
+        },
+        "exp": {
+          "type": "integer"
+        },
+        "operator": {
           "type": "string"
         },
-        "not_after": {
+        "subject_id": {
           "type": "string"
         },
-        "rs_id": {
+        "role": {
           "type": "string"
         }
       },
       "required": [
-        "issued_at",
-        "surrogate_id",
-        "subject_id",
+        "version",
         "cr_id",
-        "version_number",
-        "not_before",
+        "surrogate_id",
+        "rs_description",
         "slr_id",
-        "issued",
-        "not_after",
-        "rs_id"
+        "iat",
+        "nbf",
+        "exp",
+        "operator",
+        "subject_id",
+        "role"
       ]
     },
     "role_specific_part": {
       "type": "object",
       "properties": {
-        "role": {
-          "type": "string"
-        },
         "usage_rules": {
           "type": "array",
           "items": {
             "type": "string"
           }
+        },
+        "source_cr_id": {
+          "type": "string"
         }
       },
       "required": [
-        "role",
-        "usage_rules"
+        "usage_rules",
+        "source_cr_id"
+      ]
+    },
+    "consent_receipt_part": {
+      "type": "object",
+      "properties": {
+        "ki_cr": {
+          "type": "object",
+          "properties": {}
+        }
+      },
+      "required": [
+        "ki_cr"
+      ]
+    },
+    "extension_part": {
+      "type": "object",
+      "properties": {
+        "extensions": {
+          "type": "object",
+          "properties": {}
+        }
+      },
+      "required": [
+        "extensions"
       ]
     }
   },
   "required": [
-    "extensions",
-    "ki_cr",
     "common_part",
-    "role_specific_part"
+    "role_specific_part",
+    "consent_receipt_part",
+    "extension_part"
   ]
 }
 
@@ -233,11 +291,14 @@ csr_schema = {
 ####
 
 
+import logging
+from json import dumps, loads
 class Sequences:
     def __init__(self, name, seq=False):
         '''
 
         :param name:
+        :param seq:  seq should always be dictionary with "seq" field.
         '''
         self.logger = logging.getLogger("sequence")
         self.name = name

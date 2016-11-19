@@ -38,7 +38,7 @@ def create_celery_app(app=None):
     if app is not None:
         app = app
     else:
-        app, apis = create_app('service_component', os.path.dirname(__file__))
+        app, apis = create_app('srv_queue', os.path.dirname(__file__))
     celery = Celery(__name__, broker=app.config['SELERY_BROKER_URL'])
     celery.conf.update(app.config)
     TaskBase = celery.Task

@@ -24,7 +24,7 @@ Consent_form_Out = {  # From Operator_CR to UI
         "rs_id": "String",
         "dataset": [
             {
-                "datase_id": "String",
+                "dataset_id": "String",
                 "title": "String",
                 "description": "String",
                 "keyword": [],
@@ -72,23 +72,41 @@ Consent_form_In = {
 
 
 from instance.settings import SERVICE_URL
+from requests import get
 class ServiceRegistryHandler:
-    def __init__(self):
+    def __init__(self, domain, endpoint):
         # Here could be some code to setup where ServiceRegistry is located etc
+        # TODO: Get this from config or such.
+        # self.registry_url = "http://178.62.229.148:8081"+"/api/v1/services/"
+        self.registry_url = domain + endpoint #"/api/v1/services/"
         pass
 
     def getService(self, service_id):
-        return Services[str(service_id)]
+        try:
+            debug_log.info("Making request GET {}{}".format(self.registry_url, service_id))
+            req = get(self.registry_url+service_id)
+            service = req.json()
+            debug_log.info(service)
+            service = service[0]
+        except Exception as e:
+            debug_log.exception(e)
+            raise e
+        return service
 
     def getService_url(self, service_id):
         debug_log.info("getService_url got {} of type {} as parameter.".format(service_id, type(service_id)))
         if isinstance(service_id, unicode):
             service_id = service_id.encode()
-        services = {
-            "1": SERVICE_URL,
-            "2": SERVICE_URL# Our Service_Mgmnt
-        }
-        return services[service_id]
+        try:
+            service = get(self.registry_url+service_id).json()
+            debug_log.info(service_id)
+            service = service[0]
+        except Exception as e:
+            debug_log.exception(e)
+            raise e
+        url = service["serviceInstance"][0]["domain"]
+
+        return url
 
 
 

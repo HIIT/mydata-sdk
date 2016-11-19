@@ -12,7 +12,7 @@ from flask_cors import CORS
 from flask_restful import Resource, Api
 from helpers import validate_json, SLR_tool, CR_tool, Helpers
 from jwcrypto import jwk
-from tasks import get_AuthToken
+from srv_tasks import get_AuthToken
 
 api_Service_Mgmnt = Blueprint("api_Service_Mgmnt", __name__)  # TODO Rename this
 
@@ -41,16 +41,6 @@ Using the code we link surrogate id to MyData Account and service confirming the
 
 '''
 
-Service_ID = "SRVMGNT-IDK3Y"
-gen = {"generate": "EC", "cvr": "P-256", "kid": Service_ID}
-gen2 = {"generate": "EC", "cvr": "P-256", "kid": Service_ID}
-service_key = jwk.JWK(**gen)
-token_key = jwk.JWK(**gen)
-
-templ = {Service_ID: {"cr_keys": loads(token_key.export_public())}}
-protti = {"alg": "ES256"}
-headeri = {"kid": Service_ID, "jwk": loads(service_key.export_public())}
-
 logger = logging.getLogger("sequence")
 debug_log = logging.getLogger("debug")
 
@@ -74,7 +64,7 @@ class Install_CR(Resource):
         super(Install_CR, self).__init__()
         self.helpers = Helpers(current_app.config)
         self.operator_url = current_app.config["OPERATOR_URL"]
-
+        self.db_path = current_app.config["DATABASE_PATH"]
     @error_handler
     def post(self):
         debug_log.info("arrived at Install_CR")
@@ -95,6 +85,8 @@ class Install_CR(Resource):
         sq.task("Verify CR format and mandatory fields")
         if role == "Source":
             debug_log.info("Source CR")
+            debug_log.info(dumps(crt.get_CR_payload(), indent=2))
+            debug_log.info(type(crt.get_CR_payload()))
             errors = validate_json(source_cr_schema, crt.get_CR_payload())
             for e in errors:
                 raise DetailedHTTPException(detail={"msg": "Validating Source CR format and fields failed",
@@ -131,7 +123,7 @@ class Install_CR(Resource):
         else:
             raise DetailedHTTPException(detail={"msg": "Verifying CR failed",},
                                         title="Failure in CR verifying",
-                                        status=451)
+                                        status=403)
 
         sq.task("Verify CSR integrity")
         # SLR includes CR keys which means we need to get key from stored SLR and use it to verify this
@@ -142,7 +134,7 @@ class Install_CR(Resource):
         else:
             raise DetailedHTTPException(detail={"msg": "Verifying CSR failed",},
                                         title="Failure in CSR verifying",
-                                        status=451)
+                                        status=403)
 
         sq.task("Verify Status Record")
 
@@ -160,15 +152,16 @@ class Install_CR(Resource):
         else:
             raise DetailedHTTPException(detail={"msg": "Verifying CSR cr_id == CR cr_id failed",},
                                         title="Failure in CSR verifying",
-                                        status=451)
+                                        status=403)
         # 2) CSR has link to previous CSR
         prev_csr_id_refers_to_null_as_it_should = crt.get_prev_record_id() == "null"
         if prev_csr_id_refers_to_null_as_it_should:
             debug_log.info("prev_csr_id_referred to null as it should.")
         else:
+            # TODO: Check here that the csr chain is intact. and then continue.
             raise DetailedHTTPException(detail={"msg": "Verifying CSR previous_id == 'null' failed",},
                                         title="Failure in CSR verifying",
-                                        status=451)
+                                        status=403)
 
         verify_is_success = crt.verify_cr(slrt.get_cr_keys())
         if verify_is_success:
@@ -178,24 +171,28 @@ class Install_CR(Resource):
             raise DetailedHTTPException(detail={"msg": "Verifying CSR failed",},
                                         title="Failure in CSR verifying")
         # 5) Previous CSR has not been withdrawn
-
         # TODO Implement
+        # If previous_id is null this step can be ignored.
+        # Else fetch previous_id from db and check the status.
 
         sq.task("Store CR and CSR")
         store_dict = {
             "rs_id": crt.get_rs_id(),
+            "csr_id": crt.get_csr_id(),
+            "consent_status": crt.get_consent_status(),
+            "previous_record_id": crt.get_prev_record_id(),
             "cr_id": crt.get_cr_id_from_cr(),
             "surrogate_id": surr_id,
             "slr_id": crt.get_slr_id(),
-            "json": crt.get_CR_payload()  # possibly store the base64 representation
+            "json": crt.cr["cr"]  # possibly store the base64 representation
         }
         self.helpers.storeCR_JSON(store_dict)
 
-        store_dict["json"] = crt.get_CSR_payload()
+        store_dict["json"] = crt.cr["csr"]
         self.helpers.storeCSR_JSON(store_dict)
         if role == "Sink":
             debug_log.info("Requesting auth_token")
-            get_AuthToken.delay(crt.get_cr_id_from_cr(), self.operator_url)
+            get_AuthToken.delay(crt.get_cr_id_from_cr(), self.operator_url, current_app.config)
         return {"status": 200, "msg": "OK"}, 200
 
 

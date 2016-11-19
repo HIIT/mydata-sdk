@@ -15,7 +15,7 @@ from helpers import register_blueprints
 
 
 def create_app(package_name, package_path, settings_override=None,
-               register_security_blueprint=False):
+               register_security_blueprint=False, register_bps=True):
     """Returns a :class:`Flask` application instance configured with common
     functionality for the Overholt platform.
     :param package_name: application package name
@@ -28,8 +28,9 @@ def create_app(package_name, package_path, settings_override=None,
     app = Flask(package_name, instance_relative_config=True)
     app.config.from_pyfile('settings.py', silent=False)
     app.config.from_object(settings_override)
-
-    rv, apis  =register_blueprints(app, package_name, package_path)
+    apis = None
+    if register_bps:
+        rv, apis  =register_blueprints(app, package_name, package_path)
 
     return app, apis
 
@@ -38,7 +39,7 @@ def create_celery_app(app=None):
     if app is not None:
         app = app
     else:
-        app, apis = create_app('operator_component', os.path.dirname(__file__))
+        app, apis = create_app('op_queue', os.path.dirname(__file__), register_bps=False)
     celery = Celery(__name__, broker=app.config['SELERY_BROKER_URL'])
     celery.conf.update(app.config)
     TaskBase = celery.Task

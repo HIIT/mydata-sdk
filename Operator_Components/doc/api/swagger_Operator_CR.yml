@@ -39,9 +39,13 @@ paths:
       # Expected responses for this operation:
       responses:
         200:
-          description: "Returns 200 OK or Error message"
+          description: "Returns 200 OK"
           schema:
             $ref: "#/definitions/Consent_FormReply"
+        500:
+          description: "Internal server error. The actual status code and content of the error message may vary depending on error occurred."
+          schema:
+            $ref: "#/definitions/errors"
 
     post:
       # Describe this verb here. Note: you can use markdown
@@ -77,10 +81,10 @@ paths:
             $ref: "#/definitions/Consent_FormReply"
       # Expected responses for this operation:
       responses:
-        200:
-          description: "Returns 200 OK or Error message"
+        201:
+          description: "Returns 201 Created"
         500:
-          description: "Internal server error"
+          description: "Internal server error. The actual status code and content of the error message may vary depending on error occurred."
           schema:
             $ref: "#/definitions/errors"
         502:
@@ -100,17 +104,114 @@ paths:
       parameters:
       - name: "cr_id"
         in: "path"
-        description: "Unique ID consent record"
+        description: "Unique ID of consent record"
         required: true
         type: "string"
         format: "uuid4"
       responses:
         200:
-          description: "returns 200 OK and Auth Token, or Error message"
+          description: "returns 200 OK and Auth Token"
           schema:
             $ref: "#/definitions/Auth_TokenReply"
         500:
-          description: "Internal server error"
+          description: "Internal server error. The actual status code and content of the error message may vary depending on error occurred."
+          schema:
+            $ref: "#/definitions/errors"
+        502:
+          description: "Bad Gateway"
+          schema:
+            $ref: "#/definitions/errors"
+
+  /introspection/{cr_id}:
+    get:
+      tags:
+      - "Operator"
+      - "Source"
+      description: "Gets last csr for given cr_id"
+      parameters:
+      - name: "cr_id"
+        in: "path"
+        description: "Unique ID of consent record"
+        required: true
+        type: "string"
+
+      responses:
+        200:
+          description: "returns 200 OK and latest csr_id"
+          schema:
+            $ref: "#/definitions/IntrospectionReply"
+        500:
+          description: "Internal server error. The actual status code and content of the error message may vary depending on error occurred."
+          schema:
+            $ref: "#/definitions/errors"
+        502:
+          description: "Bad Gateway"
+          schema:
+            $ref: "#/definitions/errors"
+
+  /consent/{cr_id}/missing_since/{csr_id}:
+    get:
+      tags:
+      - "Operator"
+      - "Source"
+      description: "Gets new csr's for given cr since given csr_id"
+      parameters:
+      - name: "cr_id"
+        in: "path"
+        description: "Unique ID of consent record"
+        required: true
+        type: "string"
+      - name: "csr_id"
+        in: "path"
+        description: "Unique ID of consent status record"
+        required: true
+        type: "string"
+      responses:
+        200:
+          description: "returns 200 OK and new csr's since given csr_id"
+          schema:
+            $ref: "#/definitions/IntrospectionMissingReply"
+        500:
+          description: "Internal server error. The actual status code and content of the error message may vary depending on error occurred."
+          schema:
+            $ref: "#/definitions/errors"
+        502:
+          description: "Bad Gateway"
+          schema:
+            $ref: "#/definitions/errors"
+
+  /account_id/{acc_id}/service/{srv_id}/consent/{cr_id}/status/{new_status}:
+    post:
+      tags:
+      - "Operator"
+      - "Source"
+      description: "Change status of consent"
+      parameters:
+      - name: "acc_id"
+        in: "path"
+        description: "Unique Surrogate id for service"
+        required: true
+        type: "string"
+      - name: "srv_id"
+        in: "path"
+        description: "Unique ID of service id"
+        required: true
+        type: "string"
+      - name: "cr_id"
+        in: "path"
+        description: "Unique ID of consent record"
+        required: true
+        type: "string"
+      - name: "new_status"
+        in: "path"
+        description: "new status as Active/Disabled/Withdrawn"
+        required: true
+        type: "string"
+      responses:
+        200:
+          description: "returns 200 OK"
+        500:
+          description: "Internal server error. The actual status code and content of the error message may vary depending on error occurred."
           schema:
             $ref: "#/definitions/errors"
         502:
@@ -146,6 +247,27 @@ definitions:
         type: string
         description: string containing auth_token
 
+  IntrospectionReply:
+    type: object
+    properties:
+      csr_id:
+        type: string
+        description: string containing csr_id
+
+  IntrospectionMissingReply:
+    type: object
+    properties:
+      missing_csr:
+        type: object
+        properties:
+          data:
+            type: array
+            items:
+              type: object
+              properties:
+                attributes:
+                  type: object
+                  description: Missing csr
 
   DataSet_Sink:
     type: object
@@ -169,10 +291,10 @@ definitions:
           type: object
           properties:
             required:
-              type: string
+              type: boolean
               description: boolean containing required
             selected:
-              type: string
+              type: boolean
               description: boolean containing selected
             title:
               type: string
@@ -213,7 +335,7 @@ definitions:
             type: string
             description: string containing access_url
       selected:
-        type: string
+        type: boolean
         description: boolean containing selected
       datase_id:
         type: string

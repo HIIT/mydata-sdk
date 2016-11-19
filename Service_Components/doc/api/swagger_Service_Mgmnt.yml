@@ -6,13 +6,30 @@ info:
 host: "example.service_mgmnt.example"
 basePath: "/api/1.2/slr"
 paths:
+  /code:
+    get:
+      tags:
+      - "Operator"
+      - "Service Management"
+      description: "Generates, store and returns unique code for the SLR flow"
+      parameters: []
+      responses:
+        200:
+          description: "Returns the code used in next steps of SLR flow. This is required\
+            \ on most endpoints that follow."
+          schema:
+            $ref: "#/definitions/CodeResponse"
+        500:
+          description: "Internal server error. The actual status code and content of the error message may vary depending on error occurred."
+          schema:
+            $ref: "#/definitions/errors"
   /auth:
     post:
       tags:
       - "Service Management"
       - "Service"
       description: "Service calls this after user has authenticated. Causes Service\
-        \ Management to generate surrogate_id for the operator."
+        \ Management to generate surrogate_id for the operator. This endpoint starts a long chain of events."
       consumes:
       - "application/json"
       produces:
@@ -29,26 +46,10 @@ paths:
           description: "Returns 200 OK so Service Mngmt knows SLR was verified\
             \ successfully"
         500:
-          description: "Internal server error"
+          description: "Internal server error. The actual status code and content of the error message may vary depending on error occurred."
           schema:
             $ref: "#/definitions/errors"
-  /code:
-    get:
-      tags:
-      - "Operator"
-      - "Service Management"
-      description: "Generates, store and returns unique code for the SLR flow"
-      parameters: []
-      responses:
-        200:
-          description: "Returns the code used in next steps of SLR flow. This is required\
-            \ on most endpoints that follow."
-          schema:
-            $ref: "#/definitions/CodeResponse"
-        500:
-          description: "Internal server error"
-          schema:
-            $ref: "#/definitions/errors"
+
   /login:
     post:
       tags:
@@ -69,9 +70,9 @@ paths:
           $ref: "#/definitions/LoginParams"
       responses:
         200:
-          description: "Returns 200 OK or Error message"
+          description: "Returns 200 OK"
         500:
-          description: "Internal server error"
+          description: "Internal server error. The actual status code and content of the error message may vary depending on error occurred."
           schema:
             $ref: "#/definitions/errors"
   /slr:
@@ -79,7 +80,7 @@ paths:
       tags:
       - "Service Management"
       - "Operator"
-      description: "Takes SLR signed by Operator, signs it with own key and sends\
+      description: "Takes SLR signed by account owner at Operator, signs it with own key and sends\
         \ to Operator for verification."
       consumes:
       - "application/json"
@@ -94,9 +95,9 @@ paths:
           $ref: "#/definitions/SlrParams"
       responses:
         200:
-          description: "Returns 200 OK or Error message"
+          description: "Returns 200 OK"
         500:
-          description: "Internal server error"
+          description: "Internal server error. The actual status code and content of the error message may vary depending on error occurred."
           schema:
             $ref: "#/definitions/errors"
 definitions:

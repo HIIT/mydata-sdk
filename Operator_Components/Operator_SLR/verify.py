@@ -136,22 +136,25 @@ class VerifySLR(Resource):
         content = decode(payload.encode())
 
         sq.task("Load decoded payload as python dict")
-        payload = loads(loads(content.decode("utf-8")))  # TODO: Figure out why we get str out of loads the first time?
+        payload = loads(content.decode("utf-8"))  # TODO: Figure out why we get str out of loads the first time?
         debug_log.info(payload)
         debug_log.info(type(payload))
 
         sq.task("Fetch link_id from decoded payload")
         slr_id = payload["link_id"]
-
+        code = request.json["data"]["code"].decode()
+        debug_log.info(code)
+        debug_log.info(request.json["data"]["code"])
         try:
             ##
             # Verify SLR with key from Service_Components Management
             ##
             sq.task("Load account_id from database")
-            for code_json in self.query_db("select * from session_store where code = ?;",
-                                           [request.json["data"]["code"]]):
-                debug_log.debug("{}  {}".format(type(code_json), code_json))
-                account_id = loads(code_json["json"])["account_id"]
+            query = self.query_db("select * from session_store where code=%s;", (request.json["data"]["code"],))
+            debug_log.info(query)
+            dict_query = loads(query)
+            debug_log.info("{}  {}".format(type(dict_query), dict_query))
+            account_id = dict_query["account_id"]
 
             debug_log.info("################Verify########################")
             debug_log.info(dumps(request.json))

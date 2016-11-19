@@ -1,0 +1,3 @@
+[submodule "Service_Components/signed_requests"]
+	path = Service_Components/signed_requests
+	url = https://github.com/Allu2/signed_requests

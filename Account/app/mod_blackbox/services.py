@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 
 """
+Minimum viable Key management. NOT FOR PRODUCTION USE.
+
+
 __author__ = "Jani Yli-Kantola"
 __copyright__ = ""
 __credits__ = ["Harri Hirvonsalo", "Aleksi Palomäki"]
@@ -68,7 +71,7 @@ def init_sqlite_db(connection=None):
               id            INTEGER   PRIMARY KEY AUTOINCREMENT,
               kid           TEXT  UNIQUE NOT NULL,
               account_id    INTEGER  UNIQUE NOT NULL,
-              jws_key       BLOB  NOT NULL
+              jwk       BLOB  NOT NULL
           );'''
 
     try:
@@ -229,7 +232,7 @@ def store_jwk_to_db(account_id=None, account_kid=None, account_key=None, cursor=
     if cursor is None:
         raise AttributeError("Provide cursor as parameter")
 
-    sql_query = "INSERT INTO account_keys (kid, account_id, jws_key) VALUES ('%s', '%s', '%s')" % \
+    sql_query = "INSERT INTO account_keys (kid, account_id, jwk) VALUES ('%s', '%s', '%s')" % \
                 (account_kid, account_id, account_key)
 
     try:
@@ -258,8 +261,7 @@ def get_key(account_id=None, cursor=None):
 
     jwk_dict = {}
 
-    # TODO: Fix field name in SQL jws_key-> jwk
-    sql_query = "SELECT id, kid, account_id, jws_key FROM account_keys WHERE account_id='%s' ORDER BY id DESC LIMIT 1" % (account_id)
+    sql_query = "SELECT id, kid, account_id, jwk FROM account_keys WHERE account_id='%s' ORDER BY id DESC LIMIT 1" % (account_id)
 
     try:
         cursor, data = execute_sql_select(sql_query=sql_query, cursor=cursor)
@@ -472,11 +474,10 @@ def jws_generate(payload=None):
     if payload is None:
         raise AttributeError("Provide payload as parameter")
 
-    payload_json = json.dumps(payload)
-    logger.debug('payload_json: ' + payload_json)
+    logger.debug('payload: ' + payload)
 
     try:
-        jws_object = jws.JWS(payload=payload_json)
+        jws_object = jws.JWS(payload=payload)
     except Exception as exp:
         exp = append_description_to_exception(exp=exp, description='Could not generate JWS object with payload')
         logger.error('Could not generate JWS object with payload: ' + repr(exp))
@@ -576,7 +577,7 @@ def jws_sign(account_id=None, account_kid=None, jws_object=None, jwk_object=None
         raise AttributeError("Provide alg as parameter")
 
     try:
-        unprotected_header = {'kid': account_kid, 'jwk': json.loads(jwk_public_json)}
+        unprotected_header = {'kid': account_kid}
         protected_header = {'alg': alg}
         unprotected_header_json = json.dumps(unprotected_header)
         protected_header_json = json.dumps(protected_header)

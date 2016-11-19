@@ -98,38 +98,54 @@ class InitDb(Resource):
         logger.info("Initing MySQL")
         json_data = [
             {
-                'firstName': 'Erkki',
-                'lastName': 'Esimerkki',
-                'dateOfBirth': '31-05-2016',
-                'email': 'erkki.esimerkki@examlpe.org',
-                'username': 'testUser',
-                'password': 'Hello',
-                'acceptTermsOfService': 'True'
+                "data": {
+                    "type": "Account",
+                    "attributes": {
+                        'firstName': 'Erkki',
+                        'lastName': 'Esimerkki',
+                        'dateOfBirth': '2016-04-29',
+                        'email': 'erkki.esimerkki@examlpe.org',
+                        'username': 'testUser',
+                        'password': 'Hello',
+                        'acceptTermsOfService': 'True'
+                    }
+                }
             },
             {
-                'firstName': 'Iso',
-                'lastName': 'Pasi',
-                'dateOfBirth': '31-05-2016',
-                'email': 'iso.pasi@examlpe.org',
-                'username': 'pasi',
-                'password': '0nk0va',
-                'acceptTermsOfService': 'True'
+                "data": {
+                    "type": "Account",
+                    "attributes": {
+                        'firstName': 'Iso',
+                        'lastName': 'Pasi',
+                        'dateOfBirth': '2016-08-12',
+                        'email': 'iso.pasi@examlpe.org',
+                        'username': 'pasi',
+                        'password': '0nk0va',
+                        'acceptTermsOfService': 'True'
+                    }
+                }
             },
             {
-                'firstName': 'Dude',
-                'lastName': 'Dudeson',
-                'dateOfBirth': '31-05-2016',
-                'email': 'dude.dudeson@examlpe.org',
-                'username': 'mydata',
-                'password': 'Hello',
-                'acceptTermsOfService': 'True'
+                "data": {
+                    "type": "Account",
+                    "attributes": {
+                        'firstName': 'Dude',
+                        'lastName': 'Dudeson',
+                        'dateOfBirth': '2016-05-31',
+                        'email': 'dude.dudeson@examlpe.org',
+                        'username': 'mydata',
+                        'password': 'Hello',
+                        'acceptTermsOfService': 'True'
+                    }
+                }
             }
         ]
+
         form_data = [
             {
                 'firstname': 'Erkki',
                 'lastname': 'Esimerkki',
-                'dateofbirth': '31-05-2016',
+                'dateofbirth': '2016-05-31',
                 'email': 'erkki.esimerkki@examlpe.org',
                 'username': 'testUser',
                 'password': 'Hello'
@@ -137,7 +153,7 @@ class InitDb(Resource):
             {
                 'firstname': 'Iso',
                 'lastname': 'Pasi',
-                'dateofbirth': '31-05-2016',
+                'dateofbirth': '2016-05-31',
                 'email': 'iso.pasi@examlpe.org',
                 'username': 'pasi',
                 'password': '0nk0va'
@@ -145,7 +161,7 @@ class InitDb(Resource):
             {
                 'firstname': 'Dude',
                 'lastname': 'Dudeson',
-                'dateofbirth': '31-05-2016',
+                'dateofbirth': '2016-05-31',
                 'email': 'dude.dudeson@examlpe.org',
                 'username': 'mydata',
                 'password': 'Hello'
@@ -160,7 +176,7 @@ class InitDb(Resource):
         logger.debug("Posting: " + str(url))
 
         logger.debug("##########")
-        logger.debug("Creating: " + repr(form_data[0]))
+        logger.debug("Creating: " + repr(json_data[0]))
         #r = requests.post(url, data=form_data[0])
         r = requests.post(url, json=json_data[0], headers=headers)
         logger.debug("Response status: " + str(r.status_code))

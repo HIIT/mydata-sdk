@@ -23,7 +23,7 @@
 # Gradle:
 .idea/gradle.xml
 .idea/libraries
-
+.idea
 # Mongo Explorer plugin:
 .idea/mongoSettings.xml
 
@@ -113,7 +113,8 @@ coverage.xml
 local_settings.py
 
 # Flask stuff:
-instance/
+####instance/
+
 .webassets-cache
 
 # Scrapy stuff:

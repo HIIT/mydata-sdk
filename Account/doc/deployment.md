@@ -58,10 +58,8 @@ These instructions are using 'Y3xUcheg' as root password.
 
 ##### In MySQL shell
 
-    CREATE USER 'mydataaccount'@'localhost' IDENTIFIED BY 'wr8gabrA';
-    DROP DATABASE MyDataAccount;
     source doc/database/MyDataAccount-DBinit.sql
-    FLUSH PRIVILEGES;
+    source doc/database/MyDataAccount-UserInit.sql
 
 ##### Quit from MySQL shell
 

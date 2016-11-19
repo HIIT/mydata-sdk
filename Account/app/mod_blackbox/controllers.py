@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Minimum viable Key management
+Minimum viable Key management. NOT FOR PRODUCTION USE.
 
 __author__ = "Jani Yli-Kantola"
 __copyright__ = ""
@@ -283,11 +283,7 @@ def sign_jws_with_jwk(account_id=None, jws_json_to_sign=None):
     if account_id is None:
         raise AttributeError("Provide account_id or as parameter")
     if jws_json_to_sign is None:
-        # raise AttributeError("Provide jws_to_sign or as parameter")
-        # Fake request payload to json
-        # TODO: Following two lines, NOT FOR PRODUCTION
-        jws_json_to_sign = json.dumps(SLR_PAYLOAD['slr'])
-        logger.info("No jws_json_to_sign provided as parameter. Using SLR_PAYLOAD -template instead.")
+        raise AttributeError("Provide jws_json_to_sign or as parameter")
 
     # jws_json_to_sign to dict
     try:
@@ -419,10 +415,7 @@ def verify_jws_signature_with_jwk(account_id=None, jws_json_to_verify=None):
     if account_id is None:
         raise AttributeError("Provide account_id or as parameter")
     if jws_json_to_verify is None:
-        # raise AttributeError("Provide jws_to_sign or as parameter")
-        # TODO: Following two lines, NOT FOR PRODUCTION
-        jws_json_to_verify = sign_jws_with_jwk(account_id=account_id)
-        logger.info("No jws_json_to_sign provided as parameter. Using SLR_PAYLOAD -template instead.")
+        raise AttributeError("Provide jws_json_to_verify or as parameter")
 
     # Prepare JWS for signing
     try:
@@ -480,10 +473,7 @@ def generate_and_sign_jws(account_id=None, jws_payload=None):
     if account_id is None:
         raise AttributeError("Provide account_id or as parameter")
     if jws_payload is None:
-        # raise AttributeError("Provide jws_to_sign or as parameter")
-        # TODO: Following two lines, NOT FOR PRODUCTION
-        jws_payload = CR_CSR_PAYLOAD['sink']['cr']
-        logger.info("No jws_payload provided as parameter. Using CR_CSR_PAYLOAD -template instead.")
+        raise AttributeError("Provide jws_payload or as parameter")
 
     # Prepare database connection
     try:

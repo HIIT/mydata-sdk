@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 __author__ = 'alpaloma'
 
-from flask import Blueprint, make_response
+from flask import Blueprint, make_response, current_app
 from flask_restful import Resource, Api
 
 from DetailedHTTPException import DetailedHTTPException, error_handler
@@ -31,9 +31,10 @@ def output_json(data, code, headers=None):
 class Root(Resource):
     #@error_handler
     def get(self):
-
-        status = '{"status": "running"}'
-        return json.loads(status)
+        app = current_app
+        config = app.config
+        status = {"id": config[""]}
+        return status
 
 
 api.add_resource(Root, '/')

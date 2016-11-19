@@ -3,9 +3,8 @@ __author__ = 'alpaloma'
 import logging
 import traceback
 from json import loads, dumps, load, dump
-from requests import post
 from uuid import uuid4 as guid
-
+import time
 from DetailedHTTPException import DetailedHTTPException, error_handler
 from Templates import ServiceRegistryHandler, Sequences
 from flask import request, Blueprint, current_app
@@ -13,6 +12,7 @@ from flask_cors import CORS
 from flask_restful import Resource, Api
 from helpers import AccountManagerHandler, Helpers
 from jwcrypto import jwk
+from requests import post
 
 api_SLR_RegisterSur = Blueprint("api_SLR_RegisterSur", __name__)
 
@@ -43,53 +43,25 @@ class RegisterSur(Resource):
     def __init__(self):
         super(RegisterSur, self).__init__()
         self.app = current_app
-        #print(current_app.config)
-        keysize = current_app.config["KEYSIZE"]
-        cert_key_path = current_app.config["CERT_KEY_PATH"]
-        self.request_timeout = current_app.config["TIMEOUT"]
-
-        SUPER_DEBUG = True
+        self.Helpers = Helpers(self.app.config)
 
         account_id = "ACC-ID-RANDOM"
-        user_account_id = account_id + "_" + str(guid())
-
-        # Keys need to come from somewhere else instead of being generated each time.
-        gen = {"generate": "EC", "cvr": "P-256", "kid": user_account_id}
-        gen3 = {"generate": "RSA", "size": keysize, "kid": account_id}
-        operator_key = jwk.JWK(**gen3)
-        try:
-            with open(cert_key_path, "r") as cert_file:
-                operator_key2 = jwk.JWK(**loads(load(cert_file)))
-                operator_key = operator_key2
-        except Exception as e:
-            print(e)
-            with open(cert_key_path, "w+") as cert_file:
-                dump(operator_key.export(), cert_file, indent=2)
-
-        # Template to send the key to key server
-        template = {account_id: {"cr_keys": loads(operator_key.export_public()),
-                                 "token_keys": loads(operator_key.export_public())
-                                 }
-                    }
-        # post("http://localhost:6666/key", json=template)
+        self.operator_key = self.Helpers.get_key()
+        self.request_timeout = self.app.config["TIMEOUT"]
 
         self.payload = \
             {
                 "version": "1.2",
                 "link_id": "",
                 "operator_id": account_id,
-                "service_id": "SRV-SH14W4S3",  # How do we know this?
+                "service_id": "",
                 "surrogate_id": "",
-                "token_key": "",
-                "operator_key": loads(operator_key.export_public()),
+                "operator_key": self.operator_key["pub"],
                 "cr_keys": "",
-                "created": ""  # time.time(),
+                "iat": int(time.time()), # TODO: set to iat when Account version used supports it
             }
         debug_log.info(dumps(self.payload, indent=3))
-
-        protti = {"alg": "RS256"}
-        headeri = {"kid": user_account_id, "jwk": loads(operator_key.export_public())}
-        self.service_registry_handler = ServiceRegistryHandler()
+        self.service_registry_handler = ServiceRegistryHandler(current_app.config["SERVICE_REGISTRY_SEARCH_DOMAIN"], current_app.config["SERVICE_REGISTRY_SEARCH_ENDPOINT"])
         self.am_url = current_app.config["ACCOUNT_MANAGEMENT_URL"]
         self.am_user = current_app.config["ACCOUNT_MANAGEMENT_USER"]
         self.am_password = current_app.config["ACCOUNT_MANAGEMENT_PASSWORD"]
@@ -99,7 +71,7 @@ class RegisterSur(Resource):
         except Exception as e:
             debug_log.warn("Initialization of AccountManager failed. We will crash later but note it here.\n{}".format(repr(e)))
 
-        self.Helpers = Helpers(current_app.config)
+
         self.query_db = self.Helpers.query_db
 
 
@@ -111,27 +83,41 @@ class RegisterSur(Resource):
             js = request.json
 
             sq.task("Load account_id and service_id from database")
-            for code_json in self.query_db("select * from session_store where code = ?;", [js["code"]]):
-                debug_log.debug("{}  {}".format(type(code_json), code_json))
-                account_id = loads(code_json["json"])["account_id"]
-                self.payload["service_id"] = loads(code_json["json"])["service_id"]
+            query = self.query_db("select * from session_store where code=%s;", (js["code"],))
+            debug_log.info(type(query))
+            debug_log.info(query)
+            dict_query = loads(query)
+            debug_log.debug("{}  {}".format(type(query), query))
+            account_id = dict_query["account_id"]
+            self.payload["service_id"] = dict_query["service_id"]
             # Check Surrogate_ID exists.
             # Fill token_key
             try:
                 sq.task("Verify surrogate_id and token_key exist")
+                token_key = js["token_key"]
                 self.payload["surrogate_id"] = js["surrogate_id"]
-                self.payload["token_key"] = {"key": js["token_key"]}
+                #self.payload["token_key"] = {"key": token_key}
+
+                sq.task("Store surrogate_id and keys for CR steps later on.")
+                key_template = {"token_key": token_key,
+                                "pop_key": token_key} # TODO: Get pop_key here?
+
+                self.Helpers.store_service_key_json(kid=token_key["kid"], surrogate_id=js["surrogate_id"], key_json=key_template)
             except Exception as e:
+                debug_log.exception(e)
                 raise DetailedHTTPException(exception=e,
                                             detail={"msg": "Received Invalid JSON that may not contain surrogate_id",
                                                     "json": js})
+            #sq.task("Fetch and fill token_issuer_keys")
+            # TODO: Token keys separetely when the time is right.
+            #self.payload["token_issuer_keys"][0] = self.Helpers.get_key()["pub"]
 
             # Create template
             self.payload["link_id"] = str(guid())
             # TODO: Currently you can generate endlessly new slr even if one exists already
-            sq.task("Fill template for Account Mgmnt")
+            sq.task("Fill template for Account Manager")
             template = {"code": js["code"],
-                        "data":{
+                        "data": {
                             "slr": {
                                 "type": "ServiceLinkRecord",
                                 "attributes": self.payload,

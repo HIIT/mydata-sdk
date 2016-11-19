@@ -18,7 +18,7 @@ logger = logging.getLogger("sequence")
 try:
     from restapi_logging_handler import RestApiHandler
 
-    restapihandler = RestApiHandler("http://localhost:9004/")
+    restapihandler = RestApiHandler("http://172.18.0.1:9004/")
     logger.addHandler(restapihandler)
 
 except Exception as e:
