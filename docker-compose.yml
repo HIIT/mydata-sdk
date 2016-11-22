@@ -53,7 +53,7 @@ services:
       - redis
     environment:
       - PYTHONUNBUFFERED='true'
-      - SERVICE_REGISTRY_SEARCH_DOMAIN='http://nginx-proxy.dhr-srv-reg-node-proper.local'
+      - SERVICE_REGISTRY_SEARCH_DOMAIN='https://sandbox.mydata.fi/registry/search'
       - SERVICE_REGISTRY_SEARCH_ENDPOINT='/api/v1/services/'
       - ACCOUNT_MANAGEMENT_URL='http://account:8080/'
       - ACCOUNT_MANAGEMENT_USER="test_sdk"
