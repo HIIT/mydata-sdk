@@ -16,14 +16,33 @@ Components are split to their own folders
 
 ## Simple Consent-flow demo
 
-When everything is deployed to localhost according to deployment instructions run
+Note:
+These instructions have been tested with Linux.
+You need to have [Docker](https://www.docker.com/products/overview#/install_the_platform), [Docker Compose](https://docs.docker.com/compose/), [Python](https://www.python.org/) and [Requests -library](http://docs.python-requests.org/) for Python installed.
 
-    python ui_flow.py
+Clone the repo and start the Docker Compose stack:
+```
+git clone https://github.com/HIIT/mydata-sdk
+cd mydata-sdk
+sudo sh start.sh  # Needed to run root only if you haven't configured a docker group for your system
+```
+
+Wait until Docker Compose stack has properly started. Last message should be
+```
+mysql-db                  | Version: '5.6.34'  socket: '/var/run/mysqld/mysqld.sock'  port: 3306  MySQL Community Server (GPL)
+```
+
+Now open another terminal and run the ui_flow.py
+```
+python ui_flow.py
+```
 
 
 ## Deployment
 
 Deployment instructions for each component can be found from module's documentation.
+
+Note: If you use [Docker](https://www.docker.com/products/overview#/install_the_platform) and [Docker-Compose](https://docs.docker.com/compose/) see `docker-compose.yml` for details about the stack.
 
 ## Documentation
 
